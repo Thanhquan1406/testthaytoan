@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import Navbar from './components/common/Navbar';
 import Sidebar from './components/common/Sidebar';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import useAuth from './hooks/useAuth';
 
 // Auth pages
 import Login from './pages/auth/Login';
@@ -24,8 +25,14 @@ import AdminCauHoi from './pages/admin/CauHoi';
 import GVDashboard from './pages/giaoVien/Dashboard';
 import GVDeThi from './pages/giaoVien/DeThi';
 import GVChinhSuaCauHoi from './pages/giaoVien/ChinhSuaCauHoi';
-import GVNganHang from './pages/giaoVien/NganHangCauHoi';
 import GVLopHoc from './pages/giaoVien/LopHoc';
+
+// Ngân hàng câu hỏi (Shared)
+import NganHangCauHoiList from './pages/giaoVien/NganHangCauHoi';
+import ViewQuestionLibrary from './pages/giaoVien/ViewQuestionLibrary';
+import ChooseImportMode from './pages/giaoVien/ChooseImportMode';
+import EditorPage from './pages/giaoVien/EditorPage';
+import TaoMaTranDe from './pages/giaoVien/TaoMaTranDe';
 import GVSinhVien from './pages/giaoVien/SinhVien';
 import GVKetQua from './pages/giaoVien/KetQua';
 import GVTheoDoi from './pages/giaoVien/TheoDoi';
@@ -53,13 +60,13 @@ const ADMIN_NAV = [
   { to: '/admin/nguoi-dung', label: 'Người dùng', icon: '👥' },
   { to: '/admin/mon-hoc', label: 'Môn học', icon: '📚' },
   { to: '/admin/de-thi', label: 'Đề thi', icon: '📄' },
-  { to: '/admin/cau-hoi', label: 'Câu hỏi', icon: '❓' },
+  { to: '/ngan-hang/dashboard', label: 'Ngân hàng câu hỏi', icon: '❓' },
 ];
 
 const GV_NAV = [
   { to: '/giao-vien', label: 'Dashboard', icon: '📊' },
   { to: '/giao-vien/de-thi', label: 'Đề thi', icon: '📄' },
-  { to: '/giao-vien/ngan-hang', label: 'Ngân hàng câu hỏi', icon: '❓' },
+  { to: '/ngan-hang/dashboard', label: 'Ngân hàng câu hỏi', icon: '❓' },
   { to: '/giao-vien/lop-hoc', label: 'Lớp học', icon: '🏫' },
   { to: '/giao-vien/sinh-vien', label: 'Sinh viên', icon: '👨‍🎓' },
   { to: '/giao-vien/ket-qua', label: 'Kết quả', icon: '📊' },
@@ -92,6 +99,19 @@ const DashboardLayout = ({ navItems, sidebarTitle }) => (
   </div>
 );
 
+/**
+ * Shared Layout dùng cho các trang chức năng chung (ví dụ: Ngân hàng câu hỏi)
+ * Tự động chọn NavItems dựa vào Role hiện tại của User
+ */
+const SharedDashboardLayout = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.vaiTro === 'ADMIN';
+  const navItems = isAdmin ? ADMIN_NAV : GV_NAV;
+  const sidebarTitle = isAdmin ? "QUẢN TRỊ" : "GIÁO VIÊN";
+
+  return <DashboardLayout navItems={navItems} sidebarTitle={sidebarTitle} />;
+};
+
 // ─── APP ─────────────────────────────────────────────────────────────────────
 
 const App = () => (
@@ -123,13 +143,21 @@ const App = () => (
         <Route path="/giao-vien" element={<GVDashboard />} />
         <Route path="/giao-vien/de-thi" element={<GVDeThi />} />
         <Route path="/giao-vien/de-thi/:deThiId/chinh-sua" element={<GVChinhSuaCauHoi />} />
-        <Route path="/giao-vien/ngan-hang" element={<GVNganHang />} />
         <Route path="/giao-vien/lop-hoc" element={<GVLopHoc />} />
         <Route path="/giao-vien/sinh-vien" element={<GVSinhVien />} />
         <Route path="/giao-vien/ket-qua" element={<GVKetQua />} />
         <Route path="/giao-vien/ket-qua/xem/:phienThiId" element={<GVXemBai />} />
         <Route path="/giao-vien/theo-doi" element={<GVTheoDoi />} />
         <Route path="/giao-vien/ho-so" element={<GVHoSo />} />
+      </Route>
+
+      {/* Shared routes (ADMIN & GIAO_VIEN) - Ngân hàng câu hỏi */}
+      <Route element={<ProtectedRoute requiredRole={["ADMIN", "GIAO_VIEN"]}><SharedDashboardLayout /></ProtectedRoute>}>
+        <Route path="/ngan-hang/dashboard" element={<NganHangCauHoiList />} />
+        <Route path="/ngan-hang/view-ngan-hang" element={<ViewQuestionLibrary />} />
+        <Route path="/ngan-hang/choose-import-question-mode" element={<ChooseImportMode />} />
+        <Route path="/ngan-hang/editor" element={<EditorPage />} />
+        <Route path="/ngan-hang/tao-ma-tran" element={<TaoMaTranDe />} />
       </Route>
 
       {/* Sinh viên routes */}
