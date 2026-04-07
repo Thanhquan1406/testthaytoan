@@ -1,0 +1,55 @@
+/**
+ * @fileoverview Xem chi tiết lịch sử bài làm của Sinh viên.
+ */
+
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../services/api';
+import QuestionCard from '../../components/exam/QuestionCard';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+
+const LichSuChiTiet = () => {
+  const { phienThiId } = useParams();
+  const navigate = useNavigate();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['sv-lich-su-ct', phienThiId],
+    queryFn: () => api.get(`/sinh-vien/lich-su-thi/${phienThiId}/chi-tiet`).then((r) => r.data),
+  });
+
+  if (isLoading) return <LoadingSpinner />;
+  if (error) return <div style={{ padding: '2rem', color: '#ef4444' }}>Không thể xem bài này: {error.message}</div>;
+
+  const answers = {};
+  data?.cauTraLois?.forEach((c) => { answers[c.cauHoiId] = c.noiDungTraLoi; });
+  const cauHois = data?.deThiId?.cauHois?.map((c) => c.cauHoiId).filter(Boolean) || [];
+
+  return (
+    <div>
+      <button onClick={() => navigate('/sinh-vien/lich-su')} style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', fontWeight: 500, marginBottom: '1rem' }}>← Lịch sử thi</button>
+      <div style={{ background: '#fff', borderRadius: '0.75rem', padding: '1.25rem', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>{data?.deThiId?.ten}</h1>
+        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.875rem', color: '#6b7280' }}>
+          <span>Điểm: <strong style={{ color: '#4f46e5', fontSize: '1.1rem' }}>{data?.ketQua?.tongDiem?.toFixed(2)}</strong></span>
+          <span>Nộp: {data?.thoiGianNop ? new Date(data.thoiGianNop).toLocaleString('vi') : '—'}</span>
+          <span>Vi phạm: {data?.viPhams?.length || 0}</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {cauHois.map((cau, i) => (
+          <QuestionCard
+            key={cau._id}
+            cauHoi={cau}
+            soThuTu={i + 1}
+            selectedAnswer={answers[cau._id] || null}
+            onAnswer={() => {}}
+            readonly={true}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default LichSuChiTiet;

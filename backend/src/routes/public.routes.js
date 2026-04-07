@@ -1,0 +1,48 @@
+/**
+ * @fileoverview Routes public - thi ẩn danh qua link công khai.
+ * Prefix: /api/public (thông tin đề) và /api/thi-an-danh (phiên thi)
+ */
+
+const express = require('express');
+const router = express.Router();
+
+const deThiLinkCtrl = require('../controllers/public/deThiLink.controller');
+const thiAnDanhCtrl = require('../controllers/public/thiAnDanh.controller');
+
+// Thông tin đề thi qua link (không cần auth)
+router.get('/de-thi-link/:maTruyCap/thong-tin', deThiLinkCtrl.getThongTin);
+router.post('/de-thi-link/:maTruyCap/bat-dau', deThiLinkCtrl.batDauAnDanh);
+
+// Phiên thi ẩn danh (cần token ẩn danh riêng)
+router.get(
+  '/thi-an-danh/phien/:phienThiId/noi-dung',
+  thiAnDanhCtrl.verifyAnonymousToken,
+  thiAnDanhCtrl.getNoiDung
+);
+router.post(
+  '/thi-an-danh/phien/:phienThiId/luu',
+  thiAnDanhCtrl.verifyAnonymousToken,
+  thiAnDanhCtrl.luuTraLoi
+);
+router.post(
+  '/thi-an-danh/phien/:phienThiId/nop-bai',
+  thiAnDanhCtrl.verifyAnonymousToken,
+  thiAnDanhCtrl.nopBai
+);
+router.post(
+  '/thi-an-danh/phien/:phienThiId/vi-pham',
+  thiAnDanhCtrl.verifyAnonymousToken,
+  thiAnDanhCtrl.viPham
+);
+router.get(
+  '/thi-an-danh/phien/:phienThiId/ket-qua',
+  thiAnDanhCtrl.verifyAnonymousToken,
+  thiAnDanhCtrl.getKetQua
+);
+router.get(
+  '/thi-an-danh/phien/:phienThiId/chi-tiet',
+  thiAnDanhCtrl.verifyAnonymousToken,
+  thiAnDanhCtrl.getChiTiet
+);
+
+module.exports = router;
