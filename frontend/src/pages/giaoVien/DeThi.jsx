@@ -5,7 +5,8 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { getDanhSach, getMonHoc, create, importFile } from '../../services/deThiService';
+import { getDanhSach, getMonHoc, getById as getDeThiById, create, update, softDelete, importFile } from '../../services/deThiService';
+import { getDanhSach as getLopHocDanhSach, getSinhVien as getSinhVienDanhSach } from '../../services/lopHocService';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Modal from '../../components/common/Modal';
 
@@ -19,6 +20,24 @@ const INIT_FORM = {
   thoiGianMo: '',
   thoiGianDong: '',
   choPhepXemLai: true,
+};
+
+const INIT_EDIT_FORM = {
+  ten: '',
+  monHocId: '',
+  thoiGianPhut: 60,
+  moTa: '',
+  trangThai: 'NHAP',
+  soLanThiToiDa: 0,
+  thoiGianMo: '',
+  thoiGianDong: '',
+  choPhepXemLai: true,
+  doiTuongThi: 'TAT_CA',
+  lopHocIds: [],
+  sinhVienIds: [],
+  cheDoXemDiem: 'THI_XONG',
+  cheDoXemDapAn: 'THI_XONG',
+  diemToiThieuXemDapAn: 0,
 };
 
 const inputStyle = {
@@ -35,6 +54,64 @@ const FormRow = ({ label, children, hint }) => (
     {hint && <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#6b7280' }}>{hint}</p>}
   </div>
 );
+
+/** Radio group dùng cho Ai được phép làm & Chế độ xem điểm/đáp án */
+const RadioGroup = ({ name, value, onChange, options }) => (
+  <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '6px' }}>
+    {options.map((opt) => (
+      <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.875rem', color: '#374151' }}>
+        <input
+          type="radio" name={name} value={opt.value} checked={value === opt.value}
+          onChange={() => onChange(opt.value)}
+          style={{ accentColor: '#2563eb', cursor: 'pointer', width: '15px', height: '15px' }}
+        />
+        {opt.label}
+      </label>
+    ))}
+  </div>
+);
+
+/**
+ * Chuyển ISO string UTC → định dạng datetime-local theo giờ địa phương (YYYY-MM-DDTHH:mm).
+ * datetime-local input hiển thị theo giờ local, nên phải trừ đi lệch múi giờ.
+ */
+const toDatetimeLocal = (iso) => {
+  if (!iso) return '';
+  try {
+    const date = new Date(iso);
+    if (isNaN(date.getTime())) return '';
+    // getTimezoneOffset() trả về phút lệch so với UTC (VN = -420 phút = UTC+7)
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+  } catch { return ''; }
+};
+
+const mapDoiTuongThiToApi = (value) => {
+  if (value === 'GIAO_THEO_LOP') return 'LOP_HOC';
+  if (value === 'GIAO_THEO_HOC_SINH') return 'HOC_SINH';
+  return 'TAT_CA';
+};
+
+const mapDoiTuongThiFromApi = (value) => {
+  if (value === 'LOP_HOC') return 'GIAO_THEO_LOP';
+  if (value === 'HOC_SINH') return 'GIAO_THEO_HOC_SINH';
+  return 'TAT_CA';
+};
+
+const mapCheDoXemDiemToApi = (value) => (value === 'TAT_CA_THI_XONG' ? 'TAT_CA_XONG' : value);
+const mapCheDoXemDiemFromApi = (value) => (value === 'TAT_CA_XONG' ? 'TAT_CA_THI_XONG' : (value || 'THI_XONG'));
+
+const mapCheDoXemDapAnToApi = (value) => {
+  if (value === 'TAT_CA_THI_XONG') return 'TAT_CA_XONG';
+  if (value === 'DIEM_TOI_THIEU') return 'DAT_DIEM';
+  return value;
+};
+
+const mapCheDoXemDapAnFromApi = (value) => {
+  if (value === 'TAT_CA_XONG') return 'TAT_CA_THI_XONG';
+  if (value === 'DAT_DIEM') return 'DIEM_TOI_THIEU';
+  return value || 'THI_XONG';
+};
 
 /* ── Lấy chủ đề theo monHocId ── */
 const useChuDe = (monHocId) =>
@@ -55,21 +132,34 @@ const DeThi = () => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
 
+  /* ── State tạo mới ── */
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(INIT_FORM);
   const [importFileObj, setImportFileObj] = useState(null);
   const [chuDeId, setChuDeId] = useState('');
   const [dragOver, setDragOver] = useState(false);
-  const [importResult, setImportResult] = useState(null); // { soLuongNhap }
+  const [importResult, setImportResult] = useState(null);
+
+  /* ── State chỉnh sửa ── */
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState(INIT_EDIT_FORM);
+
+  /* ── State xóa ── */
+  const [deleteTarget, setDeleteTarget] = useState(null); // { _id, ten }
 
   const set = (key) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setForm((p) => {
       const next = { ...p, [key]: value };
-      // Khi đổi môn học → reset chuDeId
       if (key === 'monHocId') setChuDeId('');
       return next;
     });
+  };
+
+  const setEdit = (key) => (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setEditForm((p) => ({ ...p, [key]: value }));
   };
 
   const { data: deThiList, isLoading } = useQuery({
@@ -80,7 +170,18 @@ const DeThi = () => {
   const { data: monHocs, isLoading: loadingMon } = useQuery({
     queryKey: ['gv-de-thi-mon-hoc'],
     queryFn: getMonHoc,
-    enabled: modalOpen,
+    enabled: modalOpen || editModalOpen,
+  });
+
+  const { data: lopHocs = [], isLoading: loadingLopHoc } = useQuery({
+    queryKey: ['gv-lop-hoc-for-de-thi'],
+    queryFn: getLopHocDanhSach,
+    enabled: editModalOpen,
+  });
+  const { data: sinhViens = [], isLoading: loadingSinhVien } = useQuery({
+    queryKey: ['gv-sinh-vien-for-de-thi'],
+    queryFn: () => getSinhVienDanhSach(''),
+    enabled: editModalOpen,
   });
 
   const { data: chuDeList = [], isLoading: loadingChuDe } = useChuDe(form.monHocId);
@@ -101,22 +202,57 @@ const DeThi = () => {
       }),
     onSuccess: async (created) => {
       queryClient.invalidateQueries({ queryKey: ['gv-de-thi'] });
-
-      // Nếu có file → import câu hỏi ngay sau khi tạo đề
       if (importFileObj && chuDeId && created?._id) {
         try {
           const result = await importFile(created._id, importFileObj, chuDeId);
           setImportResult(result);
-        } catch {
-          // Import lỗi không block redirect
-        }
+        } catch { /* Import lỗi không block redirect */ }
       }
-
       setModalOpen(false);
       if (created?._id) navigate(`/giao-vien/de-thi/${created._id}/chinh-sua`);
     },
   });
 
+  /* ── Cập nhật đề thi ── */
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      update(editingId, {
+        ten: editForm.ten.trim(),
+        monHocId: editForm.monHocId,
+        thoiGianPhut: Number(editForm.thoiGianPhut) || 60,
+        moTa: editForm.moTa.trim() || undefined,
+        trangThai: editForm.trangThai,
+        soLanThiToiDa: Number(editForm.soLanThiToiDa) || 0,
+        choPhepXemLai: editForm.cheDoXemDapAn !== 'KHONG',
+        // datetime-local value "YYYY-MM-DDTHH:mm" → new Date() hiểu là giờ địa phương → toISOString() ra UTC đúng
+        thoiGianMo: editForm.thoiGianMo ? new Date(editForm.thoiGianMo).toISOString() : null,
+        thoiGianDong: editForm.thoiGianDong ? new Date(editForm.thoiGianDong).toISOString() : null,
+        doiTuongThi: mapDoiTuongThiToApi(editForm.doiTuongThi),
+        lopHocIds: editForm.doiTuongThi === 'GIAO_THEO_LOP' ? editForm.lopHocIds : [],
+        sinhVienIds: editForm.doiTuongThi === 'GIAO_THEO_HOC_SINH' ? editForm.sinhVienIds : [],
+        cheDoXemDiem: mapCheDoXemDiemToApi(editForm.cheDoXemDiem),
+        cheDoXemDapAn: mapCheDoXemDapAnToApi(editForm.cheDoXemDapAn),
+        diemToiThieuXemDapAn: mapCheDoXemDapAnToApi(editForm.cheDoXemDapAn) === 'DAT_DIEM'
+          ? Number(editForm.diemToiThieuXemDapAn) || 0
+          : 0,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['gv-de-thi'] });
+      setEditModalOpen(false);
+      setEditingId(null);
+    },
+  });
+
+  /* ── Xóa đề thi (soft delete) ── */
+  const deleteMutation = useMutation({
+    mutationFn: () => softDelete(deleteTarget._id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gv-de-thi'] });
+      setDeleteTarget(null);
+    },
+  });
+
+  /* ── Mở modal tạo ── */
   const openModal = () => {
     setForm(INIT_FORM);
     setImportFileObj(null);
@@ -125,26 +261,88 @@ const DeThi = () => {
     setModalOpen(true);
   };
 
-  const closeModal = () => {
-    if (!createMutation.isPending) setModalOpen(false);
+  const closeModal = () => { if (!createMutation.isPending) setModalOpen(false); };
+
+  /* ── Mở modal chỉnh sửa ── */
+  const openEditModal = async (d) => {
+    setEditingId(d._id);
+    setEditForm({
+      ten: d.ten || '',
+      monHocId: d.monHocId?._id || d.monHocId || '',
+      thoiGianPhut: d.thoiGianPhut ?? 60,
+      moTa: d.moTa || '',
+      trangThai: d.trangThai || 'NHAP',
+      soLanThiToiDa: d.soLanThiToiDa ?? 0,
+      thoiGianMo: toDatetimeLocal(d.thoiGianMo),
+      thoiGianDong: toDatetimeLocal(d.thoiGianDong),
+      choPhepXemLai: d.choPhepXemLai ?? true,
+      doiTuongThi: mapDoiTuongThiFromApi(d.doiTuongThi),
+      lopHocIds: [],
+      sinhVienIds: [],
+      cheDoXemDiem: mapCheDoXemDiemFromApi(d.cheDoXemDiem),
+      cheDoXemDapAn: mapCheDoXemDapAnFromApi(d.cheDoXemDapAn),
+      diemToiThieuXemDapAn: d.diemToiThieuXemDapAn ?? 0,
+    });
+    setEditModalOpen(true);
+
+    try {
+      const detail = await getDeThiById(d._id);
+      const lopHocIds = (detail?.lopHocIds || [])
+        .map((item) => {
+          const raw = item?.lopHocId;
+          if (!raw) return null;
+          return typeof raw === 'string' ? raw : raw._id;
+        })
+        .filter(Boolean);
+      const sinhVienIds = (detail?.sinhVienIds || [])
+        .map((item) => {
+          const raw = item?.sinhVienId;
+          if (!raw) return null;
+          return typeof raw === 'string' ? raw : raw._id;
+        })
+        .filter(Boolean);
+      setEditForm((prev) => ({
+        ...prev,
+        doiTuongThi: mapDoiTuongThiFromApi(detail?.doiTuongThi || prev.doiTuongThi),
+        lopHocIds,
+        sinhVienIds,
+        cheDoXemDiem: mapCheDoXemDiemFromApi(detail?.cheDoXemDiem || prev.cheDoXemDiem),
+        cheDoXemDapAn: mapCheDoXemDapAnFromApi(detail?.cheDoXemDapAn || prev.cheDoXemDapAn),
+        diemToiThieuXemDapAn: detail?.diemToiThieuXemDapAn ?? prev.diemToiThieuXemDapAn,
+      }));
+    } catch {
+      // Giữ nguyên dữ liệu đã có nếu tải chi tiết lỗi.
+    }
   };
+
+  const closeEditModal = () => { if (!updateMutation.isPending) setEditModalOpen(false); };
 
   const handleFileSelect = (file) => {
     if (!file) return;
     const allowed = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
-    if (!allowed.includes(file.type)) {
-      alert('Chỉ chấp nhận file PDF hoặc DOCX');
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File quá lớn. Tối đa 10MB');
-      return;
-    }
+    if (!allowed.includes(file.type)) { alert('Chỉ chấp nhận file PDF hoặc DOCX'); return; }
+    if (file.size > 10 * 1024 * 1024) { alert('File quá lớn. Tối đa 10MB'); return; }
     setImportFileObj(file);
   };
 
   const isFormValid = form.ten.trim() && form.monHocId;
+  const isEditFormValid = editForm.ten.trim() && editForm.monHocId;
   const hasFile = !!importFileObj;
+
+  /* ── Badge trạng thái ── */
+  const TrangThaiBadge = ({ trangThai }) => {
+    const map = {
+      NHAP:      { label: 'Nháp',      bg: '#f3f4f6', color: '#6b7280' },
+      CONG_KHAI: { label: 'Công khai', bg: '#dcfce7', color: '#16a34a' },
+      DONG:      { label: 'Đã đóng',   bg: '#fee2e2', color: '#dc2626' },
+    };
+    const s = map[trangThai] || map.NHAP;
+    return (
+      <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: '9999px', background: s.bg, color: s.color }}>
+        {s.label}
+      </span>
+    );
+  };
 
   if (isLoading) return <LoadingSpinner />;
 
@@ -164,16 +362,52 @@ const DeThi = () => {
       {/* Danh sách đề thi */}
       <div style={{ display: 'grid', gap: '0.75rem' }}>
         {deThiList?.data?.map((d) => (
-          <div key={d._id} style={{ background: '#fff', padding: '1rem 1.25rem', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontWeight: 600 }}>{d.ten}</div>
-              <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+          <div
+            key={d._id}
+            style={{ background: '#fff', padding: '1rem 1.25rem', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 600 }}>{d.ten}</span>
+                <TrangThaiBadge trangThai={d.trangThai} />
+              </div>
+              <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '2px' }}>
                 {d.monHocId?.ten} • {d.thoiGianPhut} phút • {d.cauHois?.length || 0} câu
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button type="button" style={{ padding: '4px 12px', background: '#dbeafe', color: '#1d4ed8', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}>Sửa</button>
-              <button type="button" style={{ padding: '4px 12px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}>Xóa</button>
+            <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, marginLeft: '1rem' }}>
+              <button
+                type="button"
+                onClick={() => openEditModal(d)}
+                title="Chỉnh sửa thông tin đề thi"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  padding: '5px 12px', background: '#dbeafe', color: '#1d4ed8',
+                  border: '1px solid #bfdbfe', borderRadius: '0.375rem',
+                  cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 500,
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#bfdbfe'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#dbeafe'}
+              >
+                ✏️ Sửa
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(d)}
+                title="Xóa đề thi"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  padding: '5px 12px', background: '#fee2e2', color: '#dc2626',
+                  border: '1px solid #fecaca', borderRadius: '0.375rem',
+                  cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 500,
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#fecaca'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#fee2e2'}
+              >
+                🗑️ Xóa
+              </button>
             </div>
           </div>
         ))}
@@ -210,13 +444,10 @@ const DeThi = () => {
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
-
-          {/* Tên đề thi */}
           <FormRow label="Tên Đề Thi *">
             <input type="text" value={form.ten} onChange={set('ten')} placeholder="VD: Kiểm tra giữa kỳ môn Toán" style={inputStyle} autoFocus />
           </FormRow>
 
-          {/* Môn học */}
           <FormRow label="Môn Học *">
             {loadingMon ? (
               <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Đang tải...</p>
@@ -235,17 +466,14 @@ const DeThi = () => {
             )}
           </FormRow>
 
-          {/* Thời gian */}
           <FormRow label="Thời Gian Làm Bài (phút) *">
             <input type="number" min={1} value={form.thoiGianPhut} onChange={set('thoiGianPhut')} style={{ ...inputStyle, width: '160px' }} />
           </FormRow>
 
-          {/* Mô tả */}
           <FormRow label="Mô Tả">
             <textarea rows={2} value={form.moTa} onChange={set('moTa')} placeholder="Mô tả ngắn về đề thi..." style={{ ...inputStyle, resize: 'vertical' }} />
           </FormRow>
 
-          {/* Trạng thái */}
           <FormRow label="Trạng Thái">
             <select value={form.trangThai} onChange={set('trangThai')} style={{ ...inputStyle, width: '260px' }}>
               <option value="NHAP">📝 Nháp (chưa công khai)</option>
@@ -253,12 +481,10 @@ const DeThi = () => {
             </select>
           </FormRow>
 
-          {/* Số lần thi */}
           <FormRow label="Số Lần Thi Tối Đa" hint="Nhập 0 để không giới hạn">
             <input type="number" min={0} value={form.soLanThiToiDa} onChange={set('soLanThiToiDa')} style={{ ...inputStyle, width: '160px' }} />
           </FormRow>
 
-          {/* Thời gian mở/đóng */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <FormRow label="Thời Gian Mở">
               <input type="datetime-local" value={form.thoiGianMo} onChange={set('thoiGianMo')} style={inputStyle} />
@@ -268,7 +494,6 @@ const DeThi = () => {
             </FormRow>
           </div>
 
-          {/* Cho phép xem lại */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
             <input id="xem-lai" type="checkbox" checked={form.choPhepXemLai} onChange={set('choPhepXemLai')} style={{ marginTop: '2px', width: '16px', height: '16px', cursor: 'pointer', flexShrink: 0, accentColor: '#4f46e5' }} />
             <label htmlFor="xem-lai" style={{ cursor: 'pointer' }}>
@@ -286,7 +511,6 @@ const DeThi = () => {
               <span style={{ marginLeft: '6px', fontSize: '0.75rem', fontWeight: 400, color: '#6b7280' }}>(tuỳ chọn)</span>
             </p>
 
-            {/* Chủ đề để lưu câu hỏi */}
             <div style={{ marginBottom: '0.75rem' }}>
               <label style={labelStyle}>
                 Chủ đề lưu câu hỏi
@@ -311,7 +535,6 @@ const DeThi = () => {
               )}
             </div>
 
-            {/* Drop zone */}
             <div
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
@@ -325,13 +548,10 @@ const DeThi = () => {
               }}
             >
               <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.docx,.doc"
+                ref={fileInputRef} type="file" accept=".pdf,.docx,.doc"
                 style={{ display: 'none' }}
                 onChange={(e) => handleFileSelect(e.target.files?.[0])}
               />
-
               {importFileObj ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                   <span style={{ fontSize: '1.25rem' }}>📄</span>
@@ -360,24 +580,18 @@ const DeThi = () => {
                   >
                     Chọn File PDF/DOCX
                   </button>
-                  <p style={{ margin: 0, fontSize: '0.8125rem', color: '#9ca3af' }}>
-                    Kéo thả file vào đây hoặc nhấn nút trên
-                  </p>
-                  <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: '#d1d5db' }}>
-                    PDF, DOCX · tối đa 10MB
-                  </p>
+                  <p style={{ margin: 0, fontSize: '0.8125rem', color: '#9ca3af' }}>Kéo thả file vào đây hoặc nhấn nút trên</p>
+                  <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: '#d1d5db' }}>PDF, DOCX · tối đa 10MB</p>
                 </>
               )}
             </div>
 
-            {/* Cảnh báo thiếu chủ đề khi có file */}
             {hasFile && !chuDeId && (
               <p style={{ margin: '6px 0 0', fontSize: '0.8125rem', color: '#b45309', background: '#fef9c3', padding: '6px 10px', borderRadius: '0.375rem' }}>
                 Vui lòng chọn chủ đề để câu hỏi trong file được lưu vào đúng nơi.
               </p>
             )}
 
-            {/* Hướng dẫn định dạng */}
             <details style={{ marginTop: '0.75rem' }}>
               <summary style={{ fontSize: '0.8125rem', color: '#6b7280', cursor: 'pointer', userSelect: 'none' }}>
                 Xem định dạng file được hỗ trợ
@@ -400,10 +614,331 @@ D) Phương án D
             </details>
           </div>
 
-          {/* Lỗi */}
           {createMutation.isError && (
             <p style={{ color: '#dc2626', fontSize: '0.875rem', margin: 0, background: '#fef2f2', padding: '0.5rem 0.75rem', borderRadius: '0.375rem' }}>
               {createMutation.error?.message}
+            </p>
+          )}
+        </div>
+      </Modal>
+
+      {/* ── Modal chỉnh sửa đề thi ── */}
+      <Modal
+        isOpen={editModalOpen}
+        onClose={closeEditModal}
+        title=""
+        size="lg"
+        footer={
+          <>
+            <button
+              type="button" onClick={closeEditModal} disabled={updateMutation.isPending}
+              style={{ padding: '0.5rem 1.25rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', background: '#fff', cursor: 'pointer', fontSize: '0.875rem' }}
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              onClick={() => updateMutation.mutate()}
+              disabled={updateMutation.isPending || !isEditFormValid}
+              style={{
+                padding: '0.5rem 1.5rem',
+                background: isEditFormValid ? '#2563eb' : '#93c5fd',
+                color: '#fff', border: 'none', borderRadius: '0.5rem',
+                cursor: isEditFormValid ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '0.875rem',
+              }}
+            >
+              {updateMutation.isPending ? 'Đang lưu...' : 'Lưu'}
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+          {/* ── Section header ── */}
+          <div style={{ borderBottom: '2px solid #e5e7eb', paddingBottom: '0.5rem' }}>
+            <h3 style={{ margin: 0, fontSize: '0.8125rem', fontWeight: 700, letterSpacing: '0.05em', color: '#1d4ed8', textTransform: 'uppercase' }}>
+              Cấu hình chung
+            </h3>
+          </div>
+
+          {/* Tên */}
+          <FormRow label="Tên">
+            <input
+              type="text" value={editForm.ten} onChange={setEdit('ten')}
+              placeholder="Nhập tên đề thi..." style={inputStyle} autoFocus
+            />
+          </FormRow>
+
+          {/* Môn học */}
+          <FormRow label="Môn học">
+            {loadingMon ? (
+              <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Đang tải...</p>
+            ) : (
+              <select value={editForm.monHocId} onChange={setEdit('monHocId')} style={inputStyle}>
+                <option value="">-- Chọn môn học --</option>
+                {monHocs?.map((m) => <option key={m._id} value={m._id}>{m.ten}</option>)}
+              </select>
+            )}
+          </FormRow>
+
+          {/* Mô tả */}
+          <FormRow label="Mô tả">
+            <textarea
+              rows={2} value={editForm.moTa} onChange={setEdit('moTa')}
+              placeholder="Nhập mô tả..." style={{ ...inputStyle, resize: 'vertical' }}
+            />
+          </FormRow>
+
+          {/* Thời gian làm bài */}
+          <div>
+            <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              Thời gian làm bài (phút)
+              <span title="Nhập 0 để không giới hạn thời gian làm bài" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '50%', background: '#e5e7eb', color: '#6b7280', fontSize: '0.65rem', fontWeight: 700, cursor: 'default' }}>i</span>
+            </label>
+            <input
+              type="number" min={0} value={editForm.thoiGianPhut} onChange={setEdit('thoiGianPhut')}
+              style={{ ...inputStyle, width: '180px' }}
+            />
+            <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#6b7280' }}>Nhập 0 để không giới hạn thời gian</p>
+          </div>
+
+          {/* Thời gian giao đề */}
+          <div>
+            <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              Thời gian giao đề
+              <span title="Khoảng thời gian học sinh có thể bắt đầu làm bài" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '50%', background: '#e5e7eb', color: '#6b7280', fontSize: '0.65rem', fontWeight: 700, cursor: 'default' }}>i</span>
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '4px', flexWrap: 'wrap' }}>
+              <input
+                type="datetime-local" value={editForm.thoiGianMo} onChange={setEdit('thoiGianMo')}
+                style={{ ...inputStyle, width: 'auto', flex: 1, minWidth: '180px' }}
+              />
+              <span style={{ fontSize: '0.875rem', color: '#6b7280', whiteSpace: 'nowrap' }}>Đến</span>
+              <input
+                type="datetime-local" value={editForm.thoiGianDong} onChange={setEdit('thoiGianDong')}
+                style={{ ...inputStyle, width: 'auto', flex: 1, minWidth: '180px' }}
+              />
+              <button
+                type="button"
+                onClick={() => setEditForm((p) => ({ ...p, thoiGianMo: '', thoiGianDong: '' }))}
+                style={{ padding: '0.45rem 0.875rem', background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.8125rem', whiteSpace: 'nowrap' }}
+              >
+                ↺ Đặt lại
+              </button>
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#6b7280' }}>
+              Bỏ trống nếu không muốn giới hạn thời gian giao đề.
+            </p>
+          </div>
+
+          {/* Ai được phép làm */}
+          <div>
+            <label style={labelStyle}>Ai được phép làm</label>
+            <RadioGroup
+              name="edit-doiTuongThi"
+              value={editForm.doiTuongThi}
+              onChange={(v) => setEditForm((p) => ({ ...p, doiTuongThi: v }))}
+              options={[
+                { value: 'TAT_CA', label: 'Tất cả mọi người' },
+                { value: 'GIAO_THEO_LOP', label: 'Giao theo lớp' },
+                { value: 'GIAO_THEO_HOC_SINH', label: 'Giao theo học sinh' },
+              ]}
+            />
+            {editForm.doiTuongThi === 'TAT_CA' && (
+              <p style={{ margin: '5px 0 0', fontSize: '0.78rem', color: '#6b7280' }}>
+                Lựa chọn này cho phép những học sinh không đăng ký/đăng nhập tài khoản vẫn có thể tham gia thi.
+              </p>
+            )}
+            {editForm.doiTuongThi === 'GIAO_THEO_LOP' && (
+              <div style={{ marginTop: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', overflow: 'hidden' }}>
+                <div style={{ background: '#f9fafb', padding: '0.625rem 0.875rem', borderBottom: '1px solid #e5e7eb', fontSize: '0.9rem', fontWeight: 600, color: '#374151' }}>
+                  Danh sách lớp học
+                </div>
+                <div style={{ maxHeight: '180px', overflowY: 'auto', background: '#fff' }}>
+                  {loadingLopHoc ? (
+                    <p style={{ margin: 0, padding: '0.75rem 0.875rem', color: '#6b7280', fontSize: '0.875rem' }}>Đang tải danh sách lớp...</p>
+                  ) : !lopHocs.length ? (
+                    <p style={{ margin: 0, padding: '0.75rem 0.875rem', color: '#9ca3af', fontSize: '0.875rem' }}>Chưa có lớp học nào</p>
+                  ) : (
+                    lopHocs.map((lop) => (
+                      <label
+                        key={lop._id}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 0.875rem', borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={editForm.lopHocIds.includes(lop._id)}
+                          onChange={(e) =>
+                            setEditForm((prev) => ({
+                              ...prev,
+                              lopHocIds: e.target.checked
+                                ? [...prev.lopHocIds, lop._id]
+                                : prev.lopHocIds.filter((id) => id !== lop._id),
+                            }))
+                          }
+                          style={{ accentColor: '#2563eb', cursor: 'pointer', width: '15px', height: '15px' }}
+                        />
+                        <span style={{ fontSize: '0.95rem', color: '#374151' }}>{lop.ten}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+            {editForm.doiTuongThi === 'GIAO_THEO_HOC_SINH' && (
+              <div style={{ marginTop: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', overflow: 'hidden' }}>
+                <div style={{ background: '#f9fafb', padding: '0.625rem 0.875rem', borderBottom: '1px solid #e5e7eb', fontSize: '0.9rem', fontWeight: 600, color: '#374151' }}>
+                  Danh sách học sinh
+                </div>
+                <div style={{ maxHeight: '220px', overflowY: 'auto', background: '#fff' }}>
+                  {loadingSinhVien ? (
+                    <p style={{ margin: 0, padding: '0.75rem 0.875rem', color: '#6b7280', fontSize: '0.875rem' }}>Đang tải danh sách học sinh...</p>
+                  ) : !sinhViens.length ? (
+                    <p style={{ margin: 0, padding: '0.75rem 0.875rem', color: '#9ca3af', fontSize: '0.875rem' }}>Chưa có học sinh nào</p>
+                  ) : (
+                    sinhViens.map((sv) => (
+                      <label
+                        key={sv._id}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 0.875rem', borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={editForm.sinhVienIds.includes(sv._id)}
+                          onChange={(e) =>
+                            setEditForm((prev) => ({
+                              ...prev,
+                              sinhVienIds: e.target.checked
+                                ? [...prev.sinhVienIds, sv._id]
+                                : prev.sinhVienIds.filter((id) => id !== sv._id),
+                            }))
+                          }
+                          style={{ accentColor: '#2563eb', cursor: 'pointer', width: '15px', height: '15px' }}
+                        />
+                        <span style={{ fontSize: '0.95rem', color: '#374151' }}>
+                          {sv.ho} {sv.ten} ({sv.maNguoiDung || sv.email})
+                        </span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Điểm và đáp án khi làm xong */}
+          <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', overflow: 'hidden' }}>
+            <div style={{ background: '#f9fafb', padding: '0.625rem 1rem', borderBottom: '1px solid #e5e7eb' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151' }}>Điểm và đáp án khi làm xong</span>
+            </div>
+            <div style={{ padding: '0.875rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+
+              {/* Cho xem điểm */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.875rem', color: '#374151', minWidth: '180px', paddingTop: '6px' }}>Cho xem điểm</span>
+                <RadioGroup
+                  name="edit-cheDoXemDiem"
+                  value={editForm.cheDoXemDiem}
+                  onChange={(v) => setEditForm((p) => ({ ...p, cheDoXemDiem: v }))}
+                  options={[
+                    { value: 'KHONG', label: 'Không' },
+                    { value: 'THI_XONG', label: 'Khi làm bài xong' },
+                    { value: 'TAT_CA_THI_XONG', label: 'Khi tất cả thi xong' },
+                  ]}
+                />
+              </div>
+
+              {/* Cho xem đề và đáp án */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.875rem', color: '#374151', minWidth: '180px', paddingTop: '6px' }}>Cho xem đề thi và đáp án</span>
+                <div>
+                  <RadioGroup
+                    name="edit-cheDoXemDapAn"
+                    value={editForm.cheDoXemDapAn}
+                    onChange={(v) => setEditForm((p) => ({ ...p, cheDoXemDapAn: v }))}
+                    options={[
+                      { value: 'KHONG', label: 'Không' },
+                      { value: 'THI_XONG', label: 'Khi làm bài xong' },
+                      { value: 'TAT_CA_THI_XONG', label: 'Khi tất cả thi xong' },
+                    ]}
+                  />
+                  {/* Tùy chọn điểm tối thiểu */}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', cursor: 'pointer', fontSize: '0.875rem', color: '#374151' }}>
+                    <input
+                      type="radio" name="edit-cheDoXemDapAn" value="DIEM_TOI_THIEU"
+                      checked={editForm.cheDoXemDapAn === 'DIEM_TOI_THIEU'}
+                      onChange={() => setEditForm((p) => ({ ...p, cheDoXemDapAn: 'DIEM_TOI_THIEU' }))}
+                      style={{ accentColor: '#2563eb', cursor: 'pointer', width: '15px', height: '15px' }}
+                    />
+                    Khi đạt đến số điểm nhất định
+                    {editForm.cheDoXemDapAn === 'DIEM_TOI_THIEU' && (
+                      <input
+                        type="number" min={0} max={100}
+                        value={editForm.diemToiThieuXemDapAn}
+                        onChange={(e) => setEditForm((p) => ({ ...p, diemToiThieuXemDapAn: e.target.value }))}
+                        style={{ width: '80px', padding: '2px 6px', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                        placeholder="Điểm..."
+                      />
+                    )}
+                  </label>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {updateMutation.isError && (
+            <p style={{ color: '#dc2626', fontSize: '0.875rem', margin: 0, background: '#fef2f2', padding: '0.5rem 0.75rem', borderRadius: '0.375rem' }}>
+              {updateMutation.error?.message || 'Có lỗi xảy ra. Vui lòng thử lại.'}
+            </p>
+          )}
+        </div>
+      </Modal>
+
+      {/* ── Modal xác nhận xóa ── */}
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => { if (!deleteMutation.isPending) setDeleteTarget(null); }}
+        title="Xác Nhận Xóa Đề Thi"
+        size="sm"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleteMutation.isPending}
+              style={{ padding: '0.5rem 1rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', background: '#fff', cursor: 'pointer' }}
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+              style={{ padding: '0.5rem 1.25rem', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}
+            >
+              {deleteMutation.isPending ? 'Đang xóa...' : 'Xóa Đề Thi'}
+            </button>
+          </>
+        }
+      >
+        <div style={{ padding: '0.5rem 0' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '2rem', lineHeight: 1 }}>⚠️</span>
+            <div>
+              <p style={{ margin: '0 0 0.5rem', fontWeight: 500 }}>
+                Bạn có chắc muốn xóa đề thi này?
+              </p>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: '#374151', background: '#f3f4f6', padding: '6px 10px', borderRadius: '0.375rem', fontWeight: 600 }}>
+                "{deleteTarget?.ten}"
+              </p>
+            </div>
+          </div>
+          <p style={{ margin: 0, fontSize: '0.8125rem', color: '#6b7280', background: '#fef9c3', padding: '8px 12px', borderRadius: '0.375rem' }}>
+            Đề thi sẽ được chuyển vào thùng rác và có thể khôi phục sau.
+          </p>
+          {deleteMutation.isError && (
+            <p style={{ margin: '0.75rem 0 0', color: '#dc2626', fontSize: '0.875rem', background: '#fef2f2', padding: '0.5rem 0.75rem', borderRadius: '0.375rem' }}>
+              {deleteMutation.error?.message || 'Có lỗi xảy ra. Vui lòng thử lại.'}
             </p>
           )}
         </div>

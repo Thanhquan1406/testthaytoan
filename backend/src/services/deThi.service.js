@@ -87,7 +87,7 @@ const taoDeThi = async (giaoVienId, data) => {
     tronCauHoi, tronDapAn, choPhepXemLai, trangThai,
     thoiGianMo, thoiGianDong, thangDiemToiDa,
     doiTuongThi, cheDoXemDiem, cheDoXemDapAn, diemToiThieuXemDapAn,
-    lopHocIds, sinhVienIds
+    lopHocIds, sinhVienIds, cauHois
   } = data;
 
   // Sinh mã đề tự động
@@ -109,6 +109,13 @@ const taoDeThi = async (giaoVienId, data) => {
     diemToiThieuXemDapAn: diemToiThieuXemDapAn || 0,
     lopHocIds: lopHocIds ? lopHocIds.map(id => ({ lopHocId: id })) : [],
     sinhVienIds: sinhVienIds ? sinhVienIds.map(id => ({ sinhVienId: id })) : [],
+    cauHois: Array.isArray(cauHois)
+      ? cauHois.map((c, idx) => ({
+          cauHoiId: c.cauHoiId,
+          diem: c.diem ?? 1,
+          thuTu: c.thuTu ?? (idx + 1),
+        }))
+      : [],
     nguoiDungId: giaoVienId,
   });
 };

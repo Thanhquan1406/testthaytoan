@@ -3,7 +3,7 @@
  * Tích hợp: đếm ngược, anti-cheat, lưu đáp án realtime, nộp bài.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getNoiDung, luuTraLoi, nopBai, viPham } from '../../services/thiService';
@@ -20,20 +20,35 @@ const LamBai = () => {
   const [violations, setViolations] = useState(0);
   const [showViolation, setShowViolation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentQ, setCurrentQ] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const draftKey = `sv_exam_draft_${phienThiId}`;
+  const normalizeId = (id) => {
+    if (!id) return '';
+    if (typeof id === 'string') return id;
+    if (typeof id === 'object' && id._id) return String(id._id);
+    return String(id);
+  };
 
   const { data: baiThi, isLoading, error } = useQuery({
     queryKey: ['sv-lam-bai', phienThiId],
     queryFn: () => getNoiDung(phienThiId),
-    onSuccess: (data) => {
-      // Khôi phục câu trả lời cũ nếu có
-      const existing = {};
-      data.cauTraLois?.forEach((c) => {
-        if (c.noiDungTraLoi) existing[c.cauHoiId] = c.noiDungTraLoi;
-      });
-      setAnswers(existing);
-    },
   });
+
+  useEffect(() => {
+    if (!baiThi) return;
+    const existing = {};
+    baiThi.cauTraLois?.forEach((c) => {
+      const cauHoiId = normalizeId(c.cauHoiId);
+      if (c.noiDungTraLoi && cauHoiId) existing[cauHoiId] = c.noiDungTraLoi;
+    });
+    try {
+      const localDraft = JSON.parse(localStorage.getItem(draftKey) || '{}');
+      setAnswers({ ...existing, ...localDraft });
+    } catch {
+      setAnswers(existing);
+    }
+  }, [baiThi]);
 
   const saveMutation = useMutation({ mutationFn: ({ cauHoiId, noiDungTraLoi }) => luuTraLoi(phienThiId, cauHoiId, noiDungTraLoi) });
 
@@ -46,15 +61,48 @@ const LamBai = () => {
   const { enterFullscreen } = useAntiCheat({ onViolation: handleViolation, enabled: true });
 
   const handleAnswer = useCallback((cauHoiId, noiDungTraLoi) => {
-    setAnswers((prev) => ({ ...prev, [cauHoiId]: noiDungTraLoi }));
-    saveMutation.mutate({ cauHoiId, noiDungTraLoi });
-  }, [saveMutation]);
+    const normalizedCauHoiId = normalizeId(cauHoiId);
+    setAnswers((prev) => {
+      const next = { ...prev, [normalizedCauHoiId]: noiDungTraLoi };
+      localStorage.setItem(draftKey, JSON.stringify(next));
+      return next;
+    });
+    saveMutation.mutate({ cauHoiId: normalizedCauHoiId, noiDungTraLoi });
+  }, [saveMutation, draftKey]);
+
+  const handleLuuBai = async ({ silent = false } = {}) => {
+    const entries = Object.entries(answers).filter(([, value]) => value !== null && value !== undefined && value !== '');
+    if (!entries.length) {
+      alert('Chưa có đáp án nào để lưu.');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const results = await Promise.allSettled(
+        entries.map(([cauHoiId, noiDungTraLoi]) => luuTraLoi(phienThiId, cauHoiId, noiDungTraLoi))
+      );
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      if (failed > 0) {
+        if (!silent) alert(`Đã lưu ${entries.length - failed}/${entries.length} câu. Vui lòng bấm Lưu bài lại để đồng bộ đủ.`);
+      } else {
+        setLastSavedAt(new Date());
+        if (!silent) alert('Đã lưu bài thành công.');
+      }
+      localStorage.setItem(draftKey, JSON.stringify(answers));
+    } catch {
+      if (!silent) alert('Lưu bài thất bại. Vui lòng thử lại.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleNopBai = async () => {
     if (!confirm('Bạn có chắc muốn nộp bài? Sau khi nộp không thể sửa.')) return;
     setIsSubmitting(true);
     try {
+      await handleLuuBai({ silent: true });
       await nopBai(phienThiId);
+      localStorage.removeItem(draftKey);
       navigate(`/sinh-vien/ket-qua/${phienThiId}`);
     } catch (err) {
       alert(err.message);
@@ -67,6 +115,10 @@ const LamBai = () => {
 
   const cauHois = baiThi?.cauHois || [];
   const answered = Object.values(answers).filter(Boolean).length;
+  const jumpToQuestion = (questionId) => {
+    const el = document.getElementById(`question-${questionId}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9', display: 'flex', flexDirection: 'column' }}>
@@ -87,16 +139,33 @@ const LamBai = () => {
             onExpired={handleNopBai}
           />
         )}
-        <button
-          onClick={handleNopBai}
-          disabled={isSubmitting}
-          style={{
-            padding: '0.5rem 1.25rem', background: '#ef4444', color: '#fff',
-            border: 'none', borderRadius: '0.5rem', fontWeight: 700, cursor: 'pointer',
-          }}
-        >
-          {isSubmitting ? 'Đang nộp...' : 'Nộp bài'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {lastSavedAt && (
+            <span style={{ color: '#c7d2fe', fontSize: '0.75rem' }}>
+              Đã lưu: {lastSavedAt.toLocaleTimeString('vi')}
+            </span>
+          )}
+          <button
+            onClick={handleLuuBai}
+            disabled={isSaving || isSubmitting}
+            style={{
+              padding: '0.5rem 1.1rem', background: '#0ea5e9', color: '#fff',
+              border: 'none', borderRadius: '0.5rem', fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            {isSaving ? 'Đang lưu...' : 'Lưu bài'}
+          </button>
+          <button
+            onClick={handleNopBai}
+            disabled={isSubmitting}
+            style={{
+              padding: '0.5rem 1.25rem', background: '#ef4444', color: '#fff',
+              border: 'none', borderRadius: '0.5rem', fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            {isSubmitting ? 'Đang nộp...' : 'Nộp bài'}
+          </button>
+        </div>
       </header>
 
       <ViolationAlert soLan={violations} onDismiss={() => setShowViolation(false)} />
@@ -109,12 +178,12 @@ const LamBai = () => {
             {cauHois.map((c, i) => (
               <button
                 key={c._id}
-                onClick={() => setCurrentQ(i)}
+                onClick={() => jumpToQuestion(normalizeId(c._id))}
                 style={{
                   aspect: '1/1', fontSize: '0.75rem', fontWeight: 600,
-                  background: answers[c._id] ? '#4f46e5' : currentQ === i ? '#e0e7ff' : '#f9fafb',
-                  color: answers[c._id] ? '#fff' : '#374151',
-                  border: currentQ === i ? '2px solid #4f46e5' : '1px solid #e5e7eb',
+                  background: answers[normalizeId(c._id)] ? '#4f46e5' : '#f9fafb',
+                  color: answers[normalizeId(c._id)] ? '#fff' : '#374151',
+                  border: '1px solid #e5e7eb',
                   borderRadius: '0.375rem', cursor: 'pointer',
                 }}
               >
@@ -126,29 +195,17 @@ const LamBai = () => {
 
         {/* Nội dung câu hỏi */}
         <div style={{ flex: 1, padding: '1.5rem', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
-          {cauHois[currentQ] && (
-            <QuestionCard
-              cauHoi={cauHois[currentQ]}
-              soThuTu={currentQ + 1}
-              selectedAnswer={answers[cauHois[currentQ]._id] || null}
-              onAnswer={handleAnswer}
-            />
-          )}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-            <button
-              onClick={() => setCurrentQ((p) => Math.max(0, p - 1))}
-              disabled={currentQ === 0}
-              style={{ padding: '0.5rem 1.25rem', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '0.5rem', cursor: currentQ === 0 ? 'not-allowed' : 'pointer', opacity: currentQ === 0 ? 0.5 : 1 }}
-            >
-              ← Câu trước
-            </button>
-            <button
-              onClick={() => setCurrentQ((p) => Math.min(cauHois.length - 1, p + 1))}
-              disabled={currentQ === cauHois.length - 1}
-              style={{ padding: '0.5rem 1.25rem', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: currentQ === cauHois.length - 1 ? 'not-allowed' : 'pointer', opacity: currentQ === cauHois.length - 1 ? 0.5 : 1 }}
-            >
-              Câu tiếp →
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {cauHois.map((cau, idx) => (
+              <div key={normalizeId(cau._id)} id={`question-${normalizeId(cau._id)}`}>
+                <QuestionCard
+                  cauHoi={cau}
+                  soThuTu={idx + 1}
+                  selectedAnswer={answers[normalizeId(cau._id)] || null}
+                  onAnswer={handleAnswer}
+                />
+              </div>
+            ))}
           </div>
         </div>
       </div>

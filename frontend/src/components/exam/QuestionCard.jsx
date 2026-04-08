@@ -14,13 +14,21 @@
  */
 const QuestionCard = ({ cauHoi, soThuTu, selectedAnswer, onAnswer, readonly = false }) => {
   const { _id, noiDung, loaiCauHoi, luaChonA, luaChonB, luaChonC, luaChonD, dapAnDung } = cauHoi;
+  const questionId = typeof _id === 'string' ? _id : String(_id);
+  const normalize = (value) => String(value || '').trim();
 
   const handleSelect = (value) => {
-    if (!readonly) onAnswer(_id, value);
+    if (!readonly) onAnswer(questionId, value);
   };
 
-  const optionStyle = (value) => {
-    const isSelected = selectedAnswer === value;
+  const optionStyle = (value, displayValue = null) => {
+    const normalizedSelected = normalize(selectedAnswer);
+    const normalizedValue = normalize(value);
+    const normalizedDisplayValue = normalize(displayValue);
+    // Tương thích dữ liệu cũ: có nơi lưu "A/B/C/D", có nơi lưu nguyên nội dung lựa chọn.
+    const isSelected =
+      normalizedSelected === normalizedValue ||
+      (!!normalizedDisplayValue && normalizedSelected === normalizedDisplayValue);
     const isCorrect = readonly && dapAnDung && value === dapAnDung;
     const isWrong = readonly && isSelected && value !== dapAnDung;
 
@@ -64,7 +72,7 @@ const QuestionCard = ({ cauHoi, soThuTu, selectedAnswer, onAnswer, readonly = fa
           {[['A', luaChonA], ['B', luaChonB], ['C', luaChonC], ['D', luaChonD]]
             .filter(([, v]) => v)
             .map(([label, value]) => (
-              <div key={label} style={optionStyle(label)} onClick={() => handleSelect(label)}>
+              <div key={label} style={optionStyle(label, value)} onClick={() => handleSelect(label)}>
                 <LabelBadge label={label} />
                 <span>{value}</span>
               </div>
@@ -85,7 +93,7 @@ const QuestionCard = ({ cauHoi, soThuTu, selectedAnswer, onAnswer, readonly = fa
       {loaiCauHoi === 'TU_LUAN' && (
         <textarea
           value={selectedAnswer || ''}
-          onChange={(e) => !readonly && onAnswer(_id, e.target.value)}
+          onChange={(e) => !readonly && onAnswer(questionId, e.target.value)}
           readOnly={readonly}
           rows={4}
           placeholder="Nhập câu trả lời của bạn..."

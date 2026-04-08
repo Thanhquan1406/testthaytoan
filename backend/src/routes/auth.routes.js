@@ -17,6 +17,10 @@ router.post('/login', validateDangNhap, authController.login);
 router.post('/login/admin', validateDangNhap, authController.loginAdmin);
 router.post('/logout', authController.logout);
 
+// Google OAuth (không cần captcha vì Google đã xác thực)
+router.post('/google', authController.loginGoogle);
+router.post('/google/register', authController.registerGoogle);
+
 // Kiểm tra tồn tại real-time
 router.get('/check-email', authController.checkEmail);
 router.get('/check-sdt', authController.checkSdt);

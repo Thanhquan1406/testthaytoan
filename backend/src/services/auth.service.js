@@ -1,13 +1,16 @@
 /**
  * @fileoverview Service xử lý nghiệp vụ xác thực người dùng.
- * Bao gồm: đăng ký, đăng nhập (thường + admin), kiểm tra email/SĐT tồn tại.
+ * Bao gồm: đăng ký, đăng nhập (thường + admin + Google OAuth), kiểm tra email/SĐT tồn tại.
  */
 
 const bcrypt = require('bcryptjs');
+const { OAuth2Client } = require('google-auth-library');
 const NguoiDung = require('../models/NguoiDung');
 const { taoToken } = require('./jwt.service');
 const { VAI_TRO } = require('../utils/constants');
 const { generateMaSinhVien } = require('../utils/slugify');
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const SALT_ROUNDS = 12;
 
@@ -90,6 +93,14 @@ const dangNhap = async (email, matKhau) => {
     });
   }
 
+  // Tài khoản Google-only không có mật khẩu
+  if (!nguoiDung.matKhau) {
+    throw Object.assign(
+      new Error('Tài khoản này được đăng ký qua Google. Vui lòng đăng nhập bằng Google.'),
+      { statusCode: 400 }
+    );
+  }
+
   const matKhauDung = await bcrypt.compare(matKhau, nguoiDung.matKhau);
   if (!matKhauDung) {
     throw Object.assign(new Error('Email hoặc mật khẩu không đúng'), { statusCode: 401 });
@@ -144,6 +155,112 @@ const doiMatKhau = async (nguoiDungId, matKhauCu, matKhauMoi) => {
 };
 
 /**
+ * Verify Google ID token và trả về payload
+ * @param {string} credential - Google ID token từ frontend
+ * @returns {Promise<{sub, email, given_name, family_name, picture}>}
+ */
+const _verifyGoogleToken = async (credential) => {
+  const ticket = await googleClient.verifyIdToken({
+    idToken: credential,
+    audience: process.env.GOOGLE_CLIENT_ID,
+  });
+  return ticket.getPayload();
+};
+
+/**
+ * Đăng nhập bằng Google OAuth
+ * - Nếu user đã tồn tại (theo googleId hoặc email): trả JWT
+ * - Nếu chưa tồn tại: trả needsRegistration=true kèm thông tin Google để hoàn tất đăng ký
+ * @param {string} credential - Google ID token
+ * @returns {Promise<DangNhapResult | {needsRegistration: true, googleData: object}>}
+ */
+const dangNhapGoogle = async (credential) => {
+  const payload = await _verifyGoogleToken(credential);
+  const { sub: googleId, email, given_name, family_name } = payload;
+
+  // Tìm theo googleId trước, rồi theo email
+  let nguoiDung = await NguoiDung.findOne({ googleId });
+  if (!nguoiDung) {
+    nguoiDung = await NguoiDung.findOne({ email: email.toLowerCase() });
+  }
+
+  if (nguoiDung) {
+    // Gắn googleId nếu đăng nhập lần đầu bằng Google nhưng tài khoản tạo thủ công
+    if (!nguoiDung.googleId) {
+      nguoiDung.googleId = googleId;
+      await nguoiDung.save();
+    }
+
+    // Admin không dùng route này
+    if (nguoiDung.vaiTro === VAI_TRO.ADMIN) {
+      throw Object.assign(new Error('Tài khoản admin không thể đăng nhập bằng Google'), {
+        statusCode: 403,
+      });
+    }
+
+    const token = taoToken({ id: nguoiDung._id, email: nguoiDung.email, vaiTro: nguoiDung.vaiTro });
+    return { token, nguoiDung: _loaiBoMatKhau(nguoiDung) };
+  }
+
+  // Chưa có tài khoản - yêu cầu bổ sung thông tin
+  return {
+    needsRegistration: true,
+    googleData: {
+      email: email.toLowerCase(),
+      ho: family_name || '',
+      ten: given_name || '',
+    },
+  };
+};
+
+/**
+ * Đăng ký tài khoản mới qua Google OAuth
+ * @param {object} data
+ * @param {string} data.credential - Google ID token (để lấy thông tin)
+ * @param {string} data.vaiTro - SINH_VIEN | GIAO_VIEN
+ * @param {string} data.soDienThoai - Số điện thoại
+ * @returns {Promise<DangNhapResult>}
+ */
+const dangKyGoogle = async ({ credential, vaiTro, soDienThoai }) => {
+  const payload = await _verifyGoogleToken(credential);
+  const { sub: googleId, email, given_name, family_name } = payload;
+
+  // Kiểm tra email/googleId chưa tồn tại
+  const emailTonTai = await NguoiDung.exists({ email: email.toLowerCase() });
+  if (emailTonTai) {
+    throw Object.assign(
+      new Error('Email này đã được đăng ký. Vui lòng đăng nhập bằng Google.'),
+      { statusCode: 409 }
+    );
+  }
+
+  const sdtTonTai = await NguoiDung.exists({ soDienThoai });
+  if (sdtTonTai) {
+    throw Object.assign(new Error('Số điện thoại đã được sử dụng'), { statusCode: 409 });
+  }
+
+  const vaiTroHopLe = [VAI_TRO.SINH_VIEN, VAI_TRO.GIAO_VIEN].includes(vaiTro)
+    ? vaiTro
+    : VAI_TRO.SINH_VIEN;
+
+  const maNguoiDung = generateMaSinhVien();
+
+  const nguoiDung = await NguoiDung.create({
+    maNguoiDung,
+    ho: family_name || 'Google',
+    ten: given_name || 'User',
+    email: email.toLowerCase(),
+    soDienThoai,
+    googleId,
+    vaiTro: vaiTroHopLe,
+    // matKhau không có - tài khoản Google-only
+  });
+
+  const token = taoToken({ id: nguoiDung._id, email: nguoiDung.email, vaiTro: nguoiDung.vaiTro });
+  return { token, nguoiDung: _loaiBoMatKhau(nguoiDung) };
+};
+
+/**
  * Kiểm tra email có tồn tại không
  * @param {string} email
  * @returns {Promise<boolean>}
@@ -176,6 +293,8 @@ module.exports = {
   dangKy,
   dangNhap,
   dangNhapAdmin,
+  dangNhapGoogle,
+  dangKyGoogle,
   doiMatKhau,
   kiemTraEmailTonTai,
   kiemTraSdtTonTai,

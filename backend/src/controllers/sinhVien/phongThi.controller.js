@@ -42,7 +42,7 @@ const getDeThi = async (req, res, next) => {
       deletedAt: null,
     })
       .populate('monHocId', 'ten')
-      .select('-cauHois -lopHocIds')
+      .select('-lopHocIds')
       .sort({ thoiGianTao: -1 })
       .lean();
 

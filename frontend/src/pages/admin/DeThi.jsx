@@ -27,12 +27,6 @@ const IcDeThi = () => (
     <line x1="8" y1="17" x2="14" y2="17" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
-const IcNhap = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
-    <path d="M12 20h9" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
 const IcCongKhai = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
     <circle cx="12" cy="12" r="10" stroke="#fff" strokeWidth="2" />
@@ -96,6 +90,15 @@ const DeThi = () => {
     },
   });
 
+  const getTenGiaoVien = (deThi) => {
+    const gv = deThi?.nguoiDungId;
+    if (!gv) return '—';
+    if (gv.hoTen) return gv.hoTen;
+    const hoTen = [gv.ho, gv.ten].filter(Boolean).join(' ').trim();
+    if (hoTen) return hoTen;
+    return gv.email || gv.maNguoiDung || '—';
+  };
+
   return (
     <div>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', marginBottom: '1.25rem' }}>Quản lý đề thi</h1>
@@ -114,7 +117,6 @@ const DeThi = () => {
           }}
         >
           <DeThiStatCard Icon={IcDeThi} value={stats?.tongDeThi} label="Tổng đề thi" bg="#7c3aed" />
-          <DeThiStatCard Icon={IcNhap} value={stats?.deNhap} label="Đề nháp" bg="#ea580c" />
           <DeThiStatCard Icon={IcCongKhai} value={stats?.congKhai} label="Công khai" bg="#059669" />
           <DeThiStatCard Icon={IcGiangVien} value={stats?.soGiangVien} label="Giảng viên" bg="#2563eb" />
         </div>
@@ -126,7 +128,7 @@ const DeThi = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                  {['Tên đề thi', 'Môn học', 'Giáo viên', 'Trạng thái', 'Thao tác'].map(h => (
+                  {['Tên đề thi', 'Môn học', 'Giáo viên tạo đề', 'Thao tác'].map(h => (
                     <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
@@ -136,16 +138,7 @@ const DeThi = () => {
                   <tr key={d._id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                     <td style={{ padding: '0.75rem 1rem', fontWeight: 500 }}>{d.ten}</td>
                     <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem' }}>{d.monHocId?.ten || '—'}</td>
-                    <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem' }}>{d.nguoiDungId?.hoTen || '—'}</td>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      <span style={{
-                        padding: '2px 8px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600,
-                        background: d.trangThai === 'CONG_KHAI' ? '#d1fae5' : '#f3f4f6',
-                        color: d.trangThai === 'CONG_KHAI' ? '#059669' : '#6b7280',
-                      }}>
-                        {d.trangThai === 'CONG_KHAI' ? 'Công khai' : 'Nháp'}
-                      </span>
-                    </td>
+                    <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem' }}>{getTenGiaoVien(d)}</td>
                     <td style={{ padding: '0.75rem 1rem' }}>
                       <button
                         type="button"

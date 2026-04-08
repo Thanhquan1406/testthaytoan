@@ -20,6 +20,8 @@ const TRANG_THAI_LABEL = {
 const TheoDoi = () => {
   const [deThiId, setDeThiId] = useState('');
   const [refreshInterval, setRefreshInterval] = useState(10000);
+  const [trangThai, setTrangThai] = useState('');
+  const [keyword, setKeyword] = useState('');
 
   const { data: deThi } = useQuery({
     queryKey: ['gv-theo-doi-de-thi'],
@@ -27,10 +29,16 @@ const TheoDoi = () => {
   });
 
   const { data: phienThis, isLoading } = useQuery({
-    queryKey: ['gv-theo-doi', deThiId],
-    queryFn: () => api.get('/giao-vien/theo-doi-thi', { params: { deThiId } }).then((r) => r.data),
+    queryKey: ['gv-theo-doi', deThiId, trangThai, keyword],
+    queryFn: () => api.get('/giao-vien/theo-doi-thi', {
+      params: {
+        deThiId,
+        ...(trangThai ? { trangThai } : {}),
+        ...(keyword.trim() ? { keyword: keyword.trim() } : {}),
+      },
+    }).then((r) => r.data),
     enabled: !!deThiId,
-    refetchInterval: refreshInterval,
+    refetchInterval: refreshInterval || false,
   });
 
   return (
@@ -45,10 +53,25 @@ const TheoDoi = () => {
         </select>
       </div>
 
-      <select value={deThiId} onChange={(e) => setDeThiId(e.target.value)} style={{ width: '100%', maxWidth: 400, padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
-        <option value="">-- Chọn đề thi để theo dõi --</option>
-        {deThi?.map((d) => <option key={d._id} value={d._id}>{d.ten}</option>)}
-      </select>
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+        <select value={deThiId} onChange={(e) => setDeThiId(e.target.value)} style={{ width: '100%', maxWidth: 350, padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem' }}>
+          <option value="">-- Chọn đề thi để theo dõi --</option>
+          {deThi?.map((d) => <option key={d._id} value={d._id}>{d.ten}</option>)}
+        </select>
+        <select value={trangThai} onChange={(e) => setTrangThai(e.target.value)} style={{ padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem' }}>
+          <option value="">-- Tất cả trạng thái --</option>
+          <option value="DANG_THI">Đang thi</option>
+          <option value="DA_NOP_BAI">Đã nộp bài</option>
+          <option value="CHUA_VAO_THI">Chưa vào thi</option>
+          <option value="DA_VAO_CHUA_NOP">Đã vào, chưa nộp</option>
+        </select>
+        <input
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          placeholder="Tìm sinh viên..."
+          style={{ padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', minWidth: '220px' }}
+        />
+      </div>
 
       {!deThiId && <div style={{ background: '#f9fafb', borderRadius: '0.75rem', padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>Chọn đề thi để xem danh sách sinh viên đang thi</div>}
       {isLoading && deThiId && <LoadingSpinner />}
@@ -61,7 +84,7 @@ const TheoDoi = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f9fafb' }}>
-                {['Học viên', 'Lớp', 'Trạng thái', 'Bắt đầu', 'Vi phạm'].map(h => (
+                {['Học viên', 'Lớp', 'Trạng thái', 'Bắt đầu', 'Kết thúc (nộp bài)', 'Vi phạm'].map(h => (
                   <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280' }}>{h}</th>
                 ))}
               </tr>
@@ -80,6 +103,9 @@ const TheoDoi = () => {
                   </td>
                   <td style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', color: '#6b7280' }}>
                     {p.thoiGianBatDau ? new Date(p.thoiGianBatDau).toLocaleTimeString('vi') : '—'}
+                  </td>
+                  <td style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                    {p.thoiGianNop ? new Date(p.thoiGianNop).toLocaleTimeString('vi') : '—'}
                   </td>
                   <td style={{ padding: '0.75rem 1rem' }}>
                     {p.soViPham > 0 ? (

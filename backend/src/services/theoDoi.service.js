@@ -31,10 +31,16 @@ const layDanhSachTheoDoi = async (giaoVienId, deThiId, query) => {
     .sort({ thoiGianBatDau: -1 })
     .lean();
 
+  const normalized = phienThis.map((p) => ({
+    ...p,
+    soViPham: p.viPhams?.length || 0,
+    viPhamGanNhat: p.viPhams?.at(-1) || null,
+  }));
+
   // Tìm kiếm theo tên
   if (query.keyword) {
     const kw = query.keyword.toLowerCase();
-    return phienThis.filter((p) => {
+    return normalized.filter((p) => {
       const ten = p.nguoiDungId
         ? `${p.nguoiDungId.ho} ${p.nguoiDungId.ten}`.toLowerCase()
         : (p.hoTenAnDanh || '').toLowerCase();
@@ -42,11 +48,7 @@ const layDanhSachTheoDoi = async (giaoVienId, deThiId, query) => {
     });
   }
 
-  return phienThis.map((p) => ({
-    ...p,
-    soViPham: p.viPhams?.length || 0,
-    viPhamGanNhat: p.viPhams?.at(-1) || null,
-  }));
+  return normalized;
 };
 
 /**

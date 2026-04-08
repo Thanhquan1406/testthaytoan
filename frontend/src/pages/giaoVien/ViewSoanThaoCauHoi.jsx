@@ -648,6 +648,17 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
                                         ten: deThiConfig.ten,
                                         monHocId: deThiConfig.monHocId,
                                         moTa: deThiConfig.moTa,
+                                        thoiGianPhut: Number(deThiConfig.thoiGianPhut) || 40,
+                                        thoiGianMo: deThiConfig.thoiGianMo ? new Date(deThiConfig.thoiGianMo).toISOString() : null,
+                                        thoiGianDong: deThiConfig.thoiGianDong ? new Date(deThiConfig.thoiGianDong).toISOString() : null,
+                                        doiTuongThi: deThiConfig.doiTuongThi,
+                                        cheDoXemDiem: deThiConfig.cheDoXemDiem,
+                                        cheDoXemDapAn: deThiConfig.cheDoXemDapAn,
+                                        diemToiThieuXemDapAn: deThiConfig.cheDoXemDapAn === 'DAT_DIEM'
+                                          ? Number(deThiConfig.diemToiThieuXemDapAn) || 0
+                                          : 0,
+                                        lopHocIds: deThiConfig.doiTuongThi === 'LOP_HOC' ? selectedLopHocIds : [],
+                                        sinhVienIds: deThiConfig.doiTuongThi === 'HOC_SINH' ? selectedSinhVienIds : [],
                                         questions: listCauHoi
                                     });
 

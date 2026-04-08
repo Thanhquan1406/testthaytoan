@@ -13,6 +13,7 @@ const dashboardCtrl = require('../controllers/admin/dashboard.controller');
 const nguoiDungCtrl = require('../controllers/admin/nguoiDung.controller');
 const monHocCtrl = require('../controllers/admin/monHoc.controller');
 const deThiCtrl = require('../controllers/admin/deThi.controller');
+const cauHoiCtrl = require('../controllers/admin/cauHoi.controller');
 const hoSoCtrl = require('../controllers/admin/hoSo.controller');
 
 // Áp dụng auth + role cho toàn bộ admin routes
@@ -44,5 +45,8 @@ router.delete('/mon-hoc/:id', monHocCtrl.remove);
 router.get('/de-thi/thong-ke', deThiCtrl.getThongKe);
 router.get('/de-thi', deThiCtrl.getAll);
 router.delete('/de-thi/:id', deThiCtrl.forceDelete);
+
+// Xem câu hỏi
+router.get('/cau-hoi', cauHoiCtrl.getAll);
 
 module.exports = router;

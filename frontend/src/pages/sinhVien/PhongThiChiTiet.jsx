@@ -50,10 +50,19 @@ const PhongThiChiTiet = () => {
               </div>
               <button
                 onClick={() => batDauMutation.mutate(d._id)}
-                disabled={batDauMutation.isPending}
-                style={{ padding: '0.5rem 1.25rem', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}
+                disabled={batDauMutation.isPending || !d.cauHois?.length}
+                style={{
+                  padding: '0.5rem 1.25rem',
+                  background: d.cauHois?.length ? '#4f46e5' : '#9ca3af',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  cursor: batDauMutation.isPending || !d.cauHois?.length ? 'not-allowed' : 'pointer',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                }}
               >
-                {batDauMutation.isPending ? 'Đang vào...' : 'Vào thi →'}
+                {batDauMutation.isPending ? 'Đang vào...' : d.cauHois?.length ? 'Vào thi →' : 'Chưa có câu hỏi'}
               </button>
             </div>
           ))}

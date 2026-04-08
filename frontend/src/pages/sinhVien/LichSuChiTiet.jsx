@@ -18,7 +18,25 @@ const LichSuChiTiet = () => {
   });
 
   if (isLoading) return <LoadingSpinner />;
-  if (error) return <div style={{ padding: '2rem', color: '#ef4444' }}>Không thể xem bài này: {error.message}</div>;
+  if (error) {
+    const is403 = error?.response?.status === 403 || error?.message?.includes('chưa được phép');
+    return (
+      <div style={{ padding: '2rem' }}>
+        <button onClick={() => navigate('/sinh-vien/lich-su')} style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', fontWeight: 500, marginBottom: '1rem' }}>← Lịch sử thi</button>
+        <div style={{ background: '#fff', borderRadius: '0.75rem', padding: '2.5rem', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{is403 ? '🔒' : '❌'}</div>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1e1b4b', marginBottom: '0.5rem' }}>
+            {is403 ? 'Chưa được phép xem đáp án' : 'Không thể xem bài'}
+          </h2>
+          <p style={{ color: '#6b7280', fontSize: '0.875rem', maxWidth: '360px', margin: '0 auto' }}>
+            {is403
+              ? 'Giáo viên đã cấu hình chưa cho phép xem đáp án bài thi này. Vui lòng quay lại sau hoặc liên hệ giáo viên.'
+              : error.message}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const answers = {};
   data?.cauTraLois?.forEach((c) => { answers[c.cauHoiId] = c.noiDungTraLoi; });

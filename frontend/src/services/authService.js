@@ -28,6 +28,21 @@ export const login = (data) => api.post('/auth/login', data).then((r) => r.data)
 export const loginAdmin = (data) => api.post('/auth/login/admin', data).then((r) => r.data);
 
 /**
+ * Đăng nhập bằng Google OAuth
+ * @param {string} credential - Google ID token từ @react-oauth/google
+ * @returns {Promise<{token, nguoiDung} | {needsRegistration: true, googleData}>}
+ */
+export const loginGoogle = (credential) =>
+  api.post('/auth/google', { credential }).then((r) => r.data);
+
+/**
+ * Hoàn tất đăng ký tài khoản mới qua Google
+ * @param {{ credential: string, vaiTro: string, soDienThoai: string }} data
+ */
+export const registerGoogle = (data) =>
+  api.post('/auth/google/register', data).then((r) => r.data);
+
+/**
  * Kiểm tra email đã tồn tại
  * @param {string} email
  * @returns {Promise<{exists: boolean}>}

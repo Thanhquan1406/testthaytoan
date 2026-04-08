@@ -83,6 +83,44 @@ const loginAdmin = async (req, res, next) => {
 };
 
 /**
+ * POST /api/auth/google
+ * Đăng nhập bằng Google OAuth
+ * Body: { credential } - Google ID token từ frontend
+ */
+const loginGoogle = async (req, res, next) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      return error(res, 'Thiếu Google credential', 400);
+    }
+
+    const result = await authService.dangNhapGoogle(credential);
+    return success(res, result, result.needsRegistration ? 'Cần hoàn tất đăng ký' : 'Đăng nhập thành công');
+  } catch (err) {
+    return next(err);
+  }
+};
+
+/**
+ * POST /api/auth/google/register
+ * Hoàn tất đăng ký tài khoản mới qua Google
+ * Body: { credential, vaiTro, soDienThoai }
+ */
+const registerGoogle = async (req, res, next) => {
+  try {
+    const { credential, vaiTro, soDienThoai } = req.body;
+    if (!credential || !vaiTro || !soDienThoai) {
+      return error(res, 'Thiếu thông tin bắt buộc (credential, vaiTro, soDienThoai)', 400);
+    }
+
+    const result = await authService.dangKyGoogle({ credential, vaiTro, soDienThoai });
+    return created(res, result, 'Đăng ký thành công');
+  } catch (err) {
+    return next(err);
+  }
+};
+
+/**
  * POST /api/auth/logout
  * Client phải tự xóa token ở phía frontend.
  * Endpoint này chỉ để thông báo thành công (stateless JWT không cần blacklist ở MVP).
@@ -121,4 +159,4 @@ const checkSdt = async (req, res, next) => {
   }
 };
 
-module.exports = { getCaptcha, register, login, loginAdmin, logout, checkEmail, checkSdt };
+module.exports = { getCaptcha, register, login, loginAdmin, loginGoogle, registerGoogle, logout, checkEmail, checkSdt };

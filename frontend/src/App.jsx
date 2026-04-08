@@ -54,6 +54,8 @@ import SVHoSo from './pages/sinhVien/HoSo';
 // Public pages
 import ThiMoCongKhai from './pages/public/ThiMoCongKhai';
 import LamBaiAnDanh from './pages/public/LamBaiAnDanh';
+import KetQuaAnDanh from './pages/public/KetQuaAnDanh';
+import ChiTietAnDanh from './pages/public/ChiTietAnDanh';
 
 // ─── SIDEBAR CONFIGS ─────────────────────────────────────────────────────────
 
@@ -62,7 +64,7 @@ const ADMIN_NAV = [
   { to: '/admin/nguoi-dung', label: 'Người dùng', icon: '👥' },
   { to: '/admin/mon-hoc', label: 'Môn học', icon: '📚' },
   { to: '/admin/de-thi', label: 'Đề thi', icon: '📄' },
-  { to: '/ngan-hang/dashboard', label: 'Ngân hàng câu hỏi', icon: '❓' },
+  { to: '/admin/cau-hoi', label: 'Ngân hàng câu hỏi', icon: '❓' },
 ];
 
 const GV_NAV = [
@@ -130,6 +132,8 @@ const App = () => (
       {/* Public - thi ẩn danh */}
       <Route path="/thi-mo" element={<ThiMoCongKhai />} />
       <Route path="/lam-bai-an-danh/:phienThiId" element={<LamBaiAnDanh />} />
+      <Route path="/ket-qua-an-danh/:phienThiId" element={<KetQuaAnDanh />} />
+      <Route path="/chi-tiet-an-danh/:phienThiId" element={<ChiTietAnDanh />} />
 
       {/* Admin routes */}
       <Route element={<ProtectedRoute requiredRole="ADMIN"><DashboardLayout navItems={ADMIN_NAV} sidebarTitle="QUẢN TRỊ" /></ProtectedRoute>}>

@@ -6,6 +6,7 @@
 
 const DeThi = require('../models/DeThi');
 const PhienThi = require('../models/PhienThi');
+const lopHocService = require('./lopHoc.service');
 const { taoTokenThiAnDanh } = require('./jwt.service');
 const {
   TRANG_THAI_PHIEN_THI,
@@ -24,7 +25,14 @@ const {
  * @returns {Promise<{phienThiId: string}>}
  */
 const batDauThiQuaLop = async (sinhVienId, deThiId, lopHocId) => {
+  // Đồng bộ theo trạng thái lớp hiện tại: chỉ cho thi nếu sinh viên vẫn thuộc lớp.
+  await lopHocService.layChiTietCuaSinhVien(lopHocId, sinhVienId);
+
   const deThi = await _layDeThiHopLe(deThiId);
+
+  if (!Array.isArray(deThi.cauHois) || deThi.cauHois.length === 0) {
+    throw Object.assign(new Error('Đề thi chưa có câu hỏi, vui lòng liên hệ giáo viên'), { statusCode: 400 });
+  }
 
   // Kiểm tra đề có xuất bản cho lớp này không
   const duocXuatBan = deThi.lopHocIds.some((l) => l.lopHocId.toString() === lopHocId);
@@ -167,11 +175,18 @@ const nopBai = async (phienThiId, nguoiDungId) => {
   phienThi.ketQua = { tongDiem, trangThaiCham: 'DA_CHAM', ghiChu: '' };
   await phienThi.save();
 
+  const xemDiem = await _duocXemDiem(deThi);
+  const xemDapAn = await _duocXemDapAn(deThi, tongDiem);
+
   return {
-    tongDiem,
-    soCauDung: cauTraLoisDaXuLy.filter((c) => c.trangThaiTraLoi === TRANG_THAI_TRA_LOI.DUNG).length,
+    tongDiem: xemDiem ? tongDiem : null,
+    soCauDung: xemDiem ? cauTraLoisDaXuLy.filter((c) => c.trangThaiTraLoi === TRANG_THAI_TRA_LOI.DUNG).length : null,
     tongSoCau: deThi.cauHois.length,
     thoiGianNop: phienThi.thoiGianNop,
+    anDiem: !xemDiem,
+    choPhepXemDapAn: xemDapAn,
+    cheDoXemDiem: deThi.cheDoXemDiem || 'THI_XONG',
+    cheDoXemDapAn: deThi.cheDoXemDapAn || 'THI_XONG',
   };
 };
 
@@ -205,7 +220,7 @@ const xuLyViPham = async (phienThiId, nguoiDungId, hanhVi) => {
  */
 const layKetQua = async (phienThiId, nguoiDungId) => {
   const phienThi = await PhienThi.findById(phienThiId)
-    .populate({ path: 'deThiId', select: 'ten choPhepXemLai thoiGianPhut' })
+    .populate({ path: 'deThiId', select: 'ten choPhepXemLai thoiGianPhut cheDoXemDiem cheDoXemDapAn diemToiThieuXemDapAn' })
     .lean();
 
   if (!phienThi) throw Object.assign(new Error('Không tìm thấy phiên thi'), { statusCode: 404 });
@@ -216,12 +231,27 @@ const layKetQua = async (phienThiId, nguoiDungId) => {
 
   if (!isOwner) throw Object.assign(new Error('Không có quyền xem kết quả này'), { statusCode: 403 });
 
+  const deThi = phienThi.deThiId;
+  const tongDiem = phienThi.ketQua?.tongDiem ?? 0;
+  const xemDiem = await _duocXemDiem(deThi);
+  const xemDapAn = await _duocXemDapAn(deThi, tongDiem);
+
   return {
     ...phienThi.ketQua,
+    tongDiem: xemDiem ? phienThi.ketQua?.tongDiem : null,
     thoiGianBatDau: phienThi.thoiGianBatDau,
     thoiGianNop: phienThi.thoiGianNop,
-    deThi: phienThi.deThiId,
+    deThi: {
+      _id: deThi._id,
+      ten: deThi.ten,
+      thoiGianPhut: deThi.thoiGianPhut,
+      choPhepXemLai: deThi.choPhepXemLai,
+    },
     soViPham: phienThi.viPhams.length,
+    anDiem: !xemDiem,
+    choPhepXemDapAn: xemDapAn,
+    cheDoXemDiem: deThi.cheDoXemDiem || 'THI_XONG',
+    cheDoXemDapAn: deThi.cheDoXemDapAn || 'THI_XONG',
   };
 };
 
@@ -242,7 +272,7 @@ const layLichSuThi = async (sinhVienId, query) => {
 
   const [data, total] = await Promise.all([
     PhienThi.find(filter)
-      .populate('deThiId', 'ten thoiGianPhut')
+      .populate('deThiId', 'ten thoiGianPhut cheDoXemDiem cheDoXemDapAn diemToiThieuXemDapAn')
       .select('ketQua thoiGianBatDau thoiGianNop deThiId')
       .skip(skip)
       .limit(limit)
@@ -251,7 +281,37 @@ const layLichSuThi = async (sinhVienId, query) => {
     PhienThi.countDocuments(filter),
   ]);
 
-  return { data, meta: buildPaginationMeta({ page, limit, total }) };
+  const deThiIds = [...new Set(data.map((p) => p.deThiId?._id?.toString()).filter(Boolean))];
+  const tatCaXongMap = {};
+  await Promise.all(
+    deThiIds.map(async (id) => { tatCaXongMap[id] = await _kiemTraTatCaThiXong(id); })
+  );
+
+  const dataVoiQuyenXem = data.map((p) => {
+    const dt = p.deThiId;
+    if (!dt) return p;
+    const cheDoXemDiem = dt.cheDoXemDiem || 'THI_XONG';
+    let xemDiem = true;
+    if (cheDoXemDiem === 'KHONG') xemDiem = false;
+    else if (cheDoXemDiem === 'TAT_CA_XONG') xemDiem = tatCaXongMap[dt._id?.toString()] ?? true;
+
+    const cheDoXemDapAn = dt.cheDoXemDapAn || 'THI_XONG';
+    const tongDiem = p.ketQua?.tongDiem ?? 0;
+    let xemDapAn = true;
+    if (cheDoXemDapAn === 'KHONG') xemDapAn = false;
+    else if (cheDoXemDapAn === 'TAT_CA_XONG') xemDapAn = tatCaXongMap[dt._id?.toString()] ?? true;
+    else if (cheDoXemDapAn === 'DAT_DIEM') xemDapAn = tongDiem >= (dt.diemToiThieuXemDapAn || 0);
+
+    return {
+      ...p,
+      ketQua: xemDiem ? p.ketQua : { ...p.ketQua, tongDiem: null },
+      anDiem: !xemDiem,
+      choPhepXemDapAn: xemDapAn,
+      cheDoXemDiem,
+    };
+  });
+
+  return { data: dataVoiQuyenXem, meta: buildPaginationMeta({ page, limit, total }) };
 };
 
 /**
@@ -261,25 +321,65 @@ const layLichSuThi = async (sinhVienId, query) => {
  * @returns {Promise<object>}
  */
 const layChiTietLichSu = async (phienThiId, nguoiDungId) => {
-  const phienThi = await PhienThi.findOne({
-    _id: phienThiId,
-    nguoiDungId,
-    trangThai: TRANG_THAI_PHIEN_THI.DA_NOP_BAI,
-  })
+  const filter = { _id: phienThiId, trangThai: TRANG_THAI_PHIEN_THI.DA_NOP_BAI };
+  if (nguoiDungId) filter.nguoiDungId = nguoiDungId;
+  else filter.nguoiDungId = null;
+
+  const phienThi = await PhienThi.findOne(filter)
     .populate({
       path: 'deThiId',
-      select: 'ten choPhepXemLai',
+      select: 'ten choPhepXemLai cheDoXemDapAn diemToiThieuXemDapAn',
       populate: { path: 'cauHois.cauHoiId', select: 'noiDung dapAnDung luaChonA luaChonB luaChonC luaChonD loaiCauHoi' },
     })
     .lean();
 
   if (!phienThi) throw Object.assign(new Error('Không tìm thấy lịch sử thi'), { statusCode: 404 });
 
-  if (!phienThi.deThiId.choPhepXemLai) {
-    throw Object.assign(new Error('Đề thi không cho phép xem lại bài'), { statusCode: 403 });
+  const deThi = phienThi.deThiId;
+  const tongDiem = phienThi.ketQua?.tongDiem ?? 0;
+  const xemDapAn = await _duocXemDapAn(deThi, tongDiem);
+
+  if (!xemDapAn) {
+    throw Object.assign(new Error('Bạn chưa được phép xem đáp án bài thi này'), { statusCode: 403 });
   }
 
   return phienThi;
+};
+
+// ─── HELPERS: CHẾ ĐỘ XEM ĐIỂM / ĐÁP ÁN ─────────────────────────────────────
+
+/**
+ * Kiểm tra tất cả phiên thi của một đề đã hoàn thành chưa (không còn ai đang thi).
+ */
+const _kiemTraTatCaThiXong = async (deThiId) => {
+  const dangThiCount = await PhienThi.countDocuments({
+    deThiId,
+    trangThai: TRANG_THAI_PHIEN_THI.DANG_THI,
+  });
+  return dangThiCount === 0;
+};
+
+/**
+ * Trả true nếu sinh viên được phép xem điểm theo cấu hình của đề.
+ */
+const _duocXemDiem = async (deThi) => {
+  const cheDoXemDiem = deThi.cheDoXemDiem || 'THI_XONG';
+  if (cheDoXemDiem === 'KHONG') return false;
+  if (cheDoXemDiem === 'THI_XONG') return true;
+  if (cheDoXemDiem === 'TAT_CA_XONG') return _kiemTraTatCaThiXong(deThi._id);
+  return true;
+};
+
+/**
+ * Trả true nếu sinh viên được phép xem đáp án theo cấu hình của đề.
+ */
+const _duocXemDapAn = async (deThi, tongDiem) => {
+  const cheDoXemDapAn = deThi.cheDoXemDapAn || 'THI_XONG';
+  if (cheDoXemDapAn === 'KHONG') return false;
+  if (cheDoXemDapAn === 'THI_XONG') return true;
+  if (cheDoXemDapAn === 'TAT_CA_XONG') return _kiemTraTatCaThiXong(deThi._id);
+  if (cheDoXemDapAn === 'DAT_DIEM') return (tongDiem || 0) >= (deThi.diemToiThieuXemDapAn || 0);
+  return true;
 };
 
 // ─── HELPERS (PRIVATE) ────────────────────────────────────────────────────────

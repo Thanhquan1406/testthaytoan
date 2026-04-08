@@ -100,6 +100,12 @@ const NguoiDung = () => {
   const formValid =
     form.ho.trim() && form.ten.trim() && form.email.trim() && form.soDienThoai.trim();
 
+  const getHoTen = (u) => {
+    if (u?.hoTen) return u.hoTen;
+    const fullName = [u?.ho, u?.ten].filter(Boolean).join(' ').trim();
+    return fullName || '—';
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
@@ -126,7 +132,7 @@ const NguoiDung = () => {
                 {data?.data?.map((u) => (
                   <tr key={u._id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                     <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#6b7280' }}>{u.maNguoiDung}</td>
-                    <td style={{ padding: '0.75rem 1rem', fontWeight: 500 }}>{u.hoTen}</td>
+                    <td style={{ padding: '0.75rem 1rem', fontWeight: 500 }}>{getHoTen(u)}</td>
                     <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem' }}>{u.email}</td>
                     <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem' }}>{u.soDienThoai}</td>
                     <td style={{ padding: '0.75rem 1rem' }}>
@@ -150,7 +156,7 @@ const NguoiDung = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(u._id, u.hoTen)}
+                        onClick={() => handleDelete(u._id, getHoTen(u))}
                         disabled={u.vaiTro === 'ADMIN'}
                         style={{
                           padding: '4px 10px', background: u.vaiTro === 'ADMIN' ? '#f3f4f6' : '#fee2e2',

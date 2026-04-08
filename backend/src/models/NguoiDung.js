@@ -13,7 +13,8 @@ const { VAI_TRO } = require('../utils/constants');
  * @property {string} ten - Tên
  * @property {string} email - Email đăng nhập (unique)
  * @property {string} soDienThoai - Số điện thoại (unique)
- * @property {string} matKhau - Mật khẩu đã hash (bcrypt)
+ * @property {string} [matKhau] - Mật khẩu đã hash (bcrypt), không có nếu đăng nhập Google
+ * @property {string} [googleId] - Google subject ID nếu đăng ký qua Google OAuth
  * @property {string} vaiTro - Vai trò (ADMIN | GIAO_VIEN | SINH_VIEN)
  * @property {Date} thoiGianTao - Thời gian tạo tài khoản
  */
@@ -55,9 +56,14 @@ const nguoiDungSchema = new mongoose.Schema(
     },
     matKhau: {
       type: String,
-      required: [true, 'Mật khẩu không được để trống'],
-      // Không select mặc định để tránh lộ hash
+      // Không bắt buộc - user đăng nhập Google không có mật khẩu
       select: false,
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
     },
     vaiTro: {
       type: String,

@@ -8,6 +8,8 @@ const NguoiDung = require('../models/NguoiDung');
 const MonHoc = require('../models/MonHoc');
 const DeThi = require('../models/DeThi');
 const CauHoi = require('../models/CauHoi');
+const ChuDe = require('../models/ChuDe');
+const NganHang = require('../models/NganHang');
 const PhienThi = require('../models/PhienThi');
 const { VAI_TRO, TRANG_THAI_DE_THI } = require('../utils/constants');
 const { getPaginationParams, buildPaginationMeta } = require('../utils/pagination');
@@ -192,12 +194,12 @@ const layDanhSachDeThi = async (query) => {
 
   const [data, total] = await Promise.all([
     DeThi.find(filter)
-      .populate('nguoiDungId', 'ho ten email')
+      .populate('nguoiDungId', 'ho ten email maNguoiDung')
       .populate('monHocId', 'ten')
       .skip(skip)
       .limit(limit)
       .sort({ thoiGianTao: -1 })
-      .lean(),
+      .lean({ virtuals: true }),
     DeThi.countDocuments(filter),
   ]);
 
@@ -225,6 +227,47 @@ const layThongKeDeThiAdmin = async () => {
 };
 
 /**
+ * Lấy danh sách câu hỏi toàn hệ thống cho admin (read-only).
+ * Hỗ trợ tìm kiếm nội dung, lọc theo giáo viên/môn học, phân trang.
+ * @param {object} query
+ * @returns {Promise<{data: object[], meta: object}>}
+ */
+const layDanhSachCauHoiAdmin = async (query) => {
+  const { page, limit, skip } = getPaginationParams(query);
+  const { search, giaoVienId, monHocId, loaiCauHoi, doKho } = query;
+
+  const filter = {};
+  if (giaoVienId) filter.nguoiDungId = giaoVienId;
+  if (loaiCauHoi) filter.loaiCauHoi = loaiCauHoi;
+  if (doKho) filter.doKho = doKho;
+  if (search) filter.noiDung = { $regex: search, $options: 'i' };
+
+  if (monHocId) {
+    const [chuDeIds, nganHangIds] = await Promise.all([
+      ChuDe.find({ monHocId }).distinct('_id'),
+      NganHang.find({ monHocId, deletedAt: null }).distinct('_id'),
+    ]);
+
+    // Câu hỏi có thể thuộc mô hình cũ (chuDeId) hoặc mô hình mới (nganHangId).
+    filter.$or = [{ chuDeId: { $in: chuDeIds } }, { nganHangId: { $in: nganHangIds } }];
+  }
+
+  const [data, total] = await Promise.all([
+    CauHoi.find(filter)
+      .populate('nguoiDungId', 'ho ten email maNguoiDung')
+      .populate({ path: 'chuDeId', select: 'ten monHocId', populate: { path: 'monHocId', select: 'ten' } })
+      .populate({ path: 'nganHangId', select: 'ten monHocId', populate: { path: 'monHocId', select: 'ten' } })
+      .sort({ thoiGianTao: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean({ virtuals: true }),
+    CauHoi.countDocuments(filter),
+  ]);
+
+  return { data, meta: buildPaginationMeta({ page, limit, total }) };
+};
+
+/**
  * Admin xóa hẳn đề thi (không phục hồi)
  * @param {string} id
  * @returns {Promise<void>}
@@ -248,5 +291,6 @@ module.exports = {
   xoaMonHoc,
   layDanhSachDeThi,
   layThongKeDeThiAdmin,
+  layDanhSachCauHoiAdmin,
   xoaHanDeThi,
 };

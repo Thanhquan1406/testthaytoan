@@ -32,6 +32,8 @@ export const getThongKeDeThi = () =>
 export const getDanhSachDeThi = (params) =>
   api.get('/admin/de-thi', { params }).then((r) => r);
 export const xoaHanDeThi = (id) => api.delete(`/admin/de-thi/${id}`).then((r) => r);
+export const getDanhSachCauHoi = (params) =>
+  api.get('/admin/cau-hoi', { params }).then((r) => r);
 
 // Hồ sơ Admin
 export const getHoSo = () => api.get('/admin/ho-so').then((r) => r.data);
