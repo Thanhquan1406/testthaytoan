@@ -8,6 +8,7 @@ const router = express.Router();
 
 const { verifyToken } = require('../middleware/auth.middleware');
 const { requireGiaoVien } = require('../middleware/role.middleware');
+const { uploadImportMemory } = require('../Config/multer');
 
 const hoSoCtrl = require('../controllers/giaoVien/hoSo.controller');
 const deThiCtrl = require('../controllers/giaoVien/deThi.controller');
@@ -34,6 +35,9 @@ router.put('/de-thi/:id', deThiCtrl.update);
 router.delete('/de-thi/:id', deThiCtrl.softDelete);
 router.post('/de-thi/:id/khoi-phuc', deThiCtrl.restore);
 router.delete('/de-thi/:id/xoa-han', deThiCtrl.forceDelete);
+
+// Import câu hỏi từ file PDF/DOCX vào đề thi
+router.post('/de-thi/:id/import', uploadImportMemory.single('file'), deThiCtrl.importFile);
 
 // Câu hỏi trong đề
 router.post('/de-thi/:id/cau-hoi', deThiCtrl.addQuestions);

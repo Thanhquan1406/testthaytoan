@@ -41,6 +41,7 @@ router.put('/mon-hoc/:id', monHocCtrl.update);
 router.delete('/mon-hoc/:id', monHocCtrl.remove);
 
 // Xem đề thi
+router.get('/de-thi/thong-ke', deThiCtrl.getThongKe);
 router.get('/de-thi', deThiCtrl.getAll);
 router.delete('/de-thi/:id', deThiCtrl.forceDelete);
 

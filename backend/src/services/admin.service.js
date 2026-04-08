@@ -205,6 +205,26 @@ const layDanhSachDeThi = async (query) => {
 };
 
 /**
+ * Thống kê đề thi cho trang admin (tổng, nháp, công khai, số giáo viên có đề)
+ * @returns {Promise<{ tongDeThi: number, deNhap: number, congKhai: number, soGiangVien: number }>}
+ */
+const layThongKeDeThiAdmin = async () => {
+  const base = { deletedAt: null };
+  const [tongDeThi, deNhap, congKhai, nguoiDungIds] = await Promise.all([
+    DeThi.countDocuments(base),
+    DeThi.countDocuments({ ...base, trangThai: TRANG_THAI_DE_THI.NHAP }),
+    DeThi.countDocuments({ ...base, trangThai: TRANG_THAI_DE_THI.CONG_KHAI }),
+    DeThi.distinct('nguoiDungId', base),
+  ]);
+  return {
+    tongDeThi,
+    deNhap,
+    congKhai,
+    soGiangVien: nguoiDungIds.filter(Boolean).length,
+  };
+};
+
+/**
  * Admin xóa hẳn đề thi (không phục hồi)
  * @param {string} id
  * @returns {Promise<void>}
@@ -227,5 +247,6 @@ module.exports = {
   capNhatMonHoc,
   xoaMonHoc,
   layDanhSachDeThi,
+  layThongKeDeThiAdmin,
   xoaHanDeThi,
 };

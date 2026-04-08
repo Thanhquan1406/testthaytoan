@@ -5,6 +5,16 @@
 const adminService = require('../../services/admin.service');
 const { success } = require('../../utils/apiResponse');
 
+/** GET /api/admin/de-thi/thong-ke */
+const getThongKe = async (req, res, next) => {
+  try {
+    const data = await adminService.layThongKeDeThiAdmin();
+    return success(res, data);
+  } catch (err) {
+    return next(err);
+  }
+};
+
 /** GET /api/admin/de-thi */
 const getAll = async (req, res, next) => {
   try {
@@ -25,4 +35,4 @@ const forceDelete = async (req, res, next) => {
   }
 };
 
-module.exports = { getAll, forceDelete };
+module.exports = { getThongKe, getAll, forceDelete };

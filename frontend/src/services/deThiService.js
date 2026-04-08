@@ -30,3 +30,20 @@ export const createPublicLink = (id) =>
   api.post(`${BASE}/${id}/link-cong-khai`).then((r) => r.data);
 export const revokePublicLink = (id) =>
   api.delete(`${BASE}/${id}/link-cong-khai`).then((r) => r);
+
+/**
+ * Import câu hỏi từ file PDF/DOCX vào đề thi.
+ * @param {string} deThiId
+ * @param {File} file - File object từ input
+ * @param {string} chuDeId - ObjectId chủ đề để lưu câu hỏi
+ */
+export const importFile = (deThiId, file, chuDeId) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('chuDeId', chuDeId);
+  return api
+    .post(`${BASE}/${deThiId}/import`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    .then((r) => r.data);
+};

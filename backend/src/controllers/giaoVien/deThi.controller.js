@@ -157,10 +157,34 @@ const revokePublicLink = async (req, res, next) => {
   }
 };
 
+/** POST /api/giao-vien/de-thi/:id/import  (multipart: file + chuDeId) */
+const importFile = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return next(Object.assign(new Error('Vui lòng chọn file PDF hoặc DOCX'), { statusCode: 400 }));
+    }
+    const { chuDeId } = req.body;
+    if (!chuDeId) {
+      return next(Object.assign(new Error('Vui lòng chọn chủ đề để lưu câu hỏi'), { statusCode: 400 }));
+    }
+    const result = await deThiService.importTuFile(
+      req.params.id,
+      GV_ID(req),
+      req.file.buffer,
+      req.file.mimetype,
+      chuDeId
+    );
+    return success(res, result, `Đã nhập thành công ${result.soLuongNhap} câu hỏi`);
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   getAll, getTrash, getMonHoc, getById,
   create, update, softDelete, restore, forceDelete,
   addQuestions, removeQuestion,
   publishToClass, revokeFromClass,
   createPublicLink, revokePublicLink,
+  importFile,
 };

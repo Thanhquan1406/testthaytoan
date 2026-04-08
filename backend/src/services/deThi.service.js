@@ -5,8 +5,10 @@
 
 const DeThi = require('../models/DeThi');
 const CauHoi = require('../models/CauHoi');
+const ChuDe = require('../models/ChuDe');
 const MonHoc = require('../models/MonHoc');
 const { TRANG_THAI_DE_THI } = require('../utils/constants');
+const { importDocx, importPdf } = require('./importExport.service');
 const { getPaginationParams, buildPaginationMeta } = require('../utils/pagination');
 const { generateAccessCode, toSlug } = require('../utils/slugify');
 
@@ -293,6 +295,60 @@ const layDanhSachMonHoc = async () => {
   return MonHoc.find({}).sort({ ten: 1 }).lean();
 };
 
+/**
+ * Import câu hỏi từ file PDF/DOCX vào đề thi.
+ * Quy trình:
+ *   1. Parse file → danh sách câu hỏi thô
+ *   2. Tạo các bản ghi CauHoi trong ngân hàng (thuộc chuDeId của GV)
+ *   3. Thêm chúng vào đề thi (DeThi.cauHois)
+ *
+ * @param {string} deThiId
+ * @param {string} giaoVienId
+ * @param {Buffer} fileBuffer  - nội dung file đọc vào bộ nhớ
+ * @param {string} mimetype    - 'application/pdf' hoặc DOCX mimetype
+ * @param {string} chuDeId     - ObjectId chủ đề để lưu câu hỏi vào
+ * @returns {Promise<{soLuongNhap: number}>}
+ */
+const importTuFile = async (deThiId, giaoVienId, fileBuffer, mimetype, chuDeId) => {
+  // Kiểm tra đề thi thuộc giáo viên
+  const deThi = await DeThi.findOne({ _id: deThiId, nguoiDungId: giaoVienId, deletedAt: null });
+  if (!deThi) throw Object.assign(new Error('Không tìm thấy đề thi'), { statusCode: 404 });
+
+  // Kiểm tra chủ đề tồn tại
+  const chuDe = await ChuDe.findById(chuDeId);
+  if (!chuDe) throw Object.assign(new Error('Chủ đề không tồn tại'), { statusCode: 404 });
+
+  // Parse file → danh sách câu hỏi thô
+  const isPdf = mimetype === 'application/pdf';
+  const rawQuestions = isPdf
+    ? await importPdf(fileBuffer)
+    : await importDocx(fileBuffer);
+
+  // Tạo câu hỏi trong ngân hàng
+  const created = await CauHoi.insertMany(
+    rawQuestions.map((q) => ({
+      ...q,
+      chuDeId,
+      nguoiDungId: giaoVienId,
+    }))
+  );
+
+  // Tính vị trí bắt đầu cho thứ tự mới
+  const baseOrder = deThi.cauHois.length;
+
+  // Thêm vào đề thi (tránh trùng nếu đã tồn tại)
+  const existingIds = new Set(deThi.cauHois.map((c) => c.cauHoiId.toString()));
+  const toAdd = created
+    .filter((c) => !existingIds.has(c._id.toString()))
+    .map((c, i) => ({ cauHoiId: c._id, thuTu: baseOrder + i }));
+
+  if (toAdd.length) {
+    await DeThi.findByIdAndUpdate(deThiId, { $push: { cauHois: { $each: toAdd } } });
+  }
+
+  return { soLuongNhap: toAdd.length };
+};
+
 module.exports = {
   layDanhSach, layThungRac, layChiTiet,
   taoDeThi, capNhatDeThi,
@@ -301,4 +357,5 @@ module.exports = {
   xuatBanChoLop, thuHoiKhoiLop,
   taoLinkCongKhai, huyLinkCongKhai,
   layDanhSachMonHoc,
+  importTuFile,
 };

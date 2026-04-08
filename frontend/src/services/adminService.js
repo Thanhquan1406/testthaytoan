@@ -27,6 +27,8 @@ export const updateMonHoc = (id, data) =>
 export const xoaMonHoc = (id) => api.delete(`/admin/mon-hoc/${id}`).then((r) => r);
 
 // Đề thi (admin view)
+export const getThongKeDeThi = () =>
+  api.get('/admin/de-thi/thong-ke').then((r) => r.data);
 export const getDanhSachDeThi = (params) =>
   api.get('/admin/de-thi', { params }).then((r) => r);
 export const xoaHanDeThi = (id) => api.delete(`/admin/de-thi/${id}`).then((r) => r);

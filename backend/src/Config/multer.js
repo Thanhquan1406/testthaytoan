@@ -45,11 +45,21 @@ const fileFilter = (_req, file, cb) => {
   }
 };
 
-/** Instance upload dùng cho import đề thi */
+/** Instance lưu file vào disk (dự phòng) */
 const uploadImport = multer({
   storage,
   fileFilter,
   limits: { fileSize: MAX_FILE_SIZE_MB * 1024 * 1024 },
 });
 
-module.exports = { uploadImport };
+/**
+ * Instance lưu file vào memory buffer (dùng để đọc nội dung trực tiếp).
+ * req.file.buffer sẽ chứa nội dung file.
+ */
+const uploadImportMemory = multer({
+  storage: multer.memoryStorage(),
+  fileFilter,
+  limits: { fileSize: MAX_FILE_SIZE_MB * 1024 * 1024 },
+});
+
+module.exports = { uploadImport, uploadImportMemory };
