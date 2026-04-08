@@ -50,3 +50,14 @@ export const importFile = (deThiId, file, chuDeId) => {
 
 /** Tạo đề thi từ bộ câu hỏi sinh ra từ ma trận */
 export const taoDeThiTuMaTran = (data) => api.post(`${BASE}/tao-tu-ma-tran`, data).then(r => r.data);
+
+/** Parse file lấy string nội dung mà không cần ngân hàng */
+export const parseFile = (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api
+    .post(`${BASE}/parse-file`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    .then((r) => r.data);
+};

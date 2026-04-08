@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../contexts/AuthContext';
-import { layCauTruc, luuCauHoi, layDanhSachMonHoc } from '../../services/nganHangService';
-import { taoDeThiTuMaTran } from '../../services/deThiService';
+import { layCauTruc, luuCauHoi, layDanhSachMonHoc, layDanhSachNganHang } from '../../services/nganHangService';
+import { taoDeThiTuMaTran, parseFile } from '../../services/deThiService';
+import { getDanhSach as getDanhSachLopHoc, getById as getLopHocById } from '../../services/lopHocService';
 
-const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, generatedQuestions, onClose }) => {
+const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, generatedQuestions, isDeThiDirect, onClose }) => {
     const { user } = useAuthContext();
     const [rawText, setRawText] = useState(initialRawText || '');
     const [fileName, setFileName] = useState(initialFileName || '');
@@ -20,7 +21,23 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
     const [isFinalReviewPhase, setIsFinalReviewPhase] = useState(false);
     const [isClassificationStep, setIsClassificationStep] = useState(false);
     const [isDeThiConfigStep, setIsDeThiConfigStep] = useState(false);
-    const [deThiConfig, setDeThiConfig] = useState({ ten: initialFileName || '', monHocId: '', moTa: '' });
+    const [deThiConfig, setDeThiConfig] = useState({ 
+        ten: initialFileName || '', 
+        monHocId: '', 
+        moTa: '',
+        thoiGianPhut: 40,
+        thoiGianMo: '',
+        thoiGianDong: '',
+        doiTuongThi: 'TAT_CA', // 'TAT_CA', 'LOP_HOC', 'HOC_SINH'
+        cheDoXemDiem: 'THI_XONG', 
+        cheDoXemDapAn: 'THI_XONG',
+        diemToiThieuXemDapAn: 0
+    });
+    const [availableLopHocs, setAvailableLopHocs] = useState([]);
+    const [selectedLopHocIds, setSelectedLopHocIds] = useState([]);
+    const [selectedSinhVienIds, setSelectedSinhVienIds] = useState([]);
+    const [classStudentsInfo, setClassStudentsInfo] = useState({}); // Cache chi tiết lớp học { lopId: { lop, sinhVienIds: [...] } }
+    const [expandedLopHocId, setExpandedLopHocId] = useState(null);
     const [monHocList, setMonHocList] = useState([]);
     const [selectedForClassification, setSelectedForClassification] = useState([]);
     const [showValidationErrors, setShowValidationErrors] = useState(false);
@@ -38,6 +55,8 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
     const [searchStandardText, setSearchStandardText] = useState("");
     const [toastMessage, setToastMessage] = useState(null);
     const [cauTrucList, setCauTrucList] = useState([]);
+    const [nganHangList, setNganHangList] = useState([]);
+    const [selectedChuDeId, setSelectedChuDeId] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     
     // Lazy loading questions in classification step
@@ -62,7 +81,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
 
     // Load Môn học cho form tạo đề
     useEffect(() => {
-        if (fromMatrix) {
+        if (fromMatrix || isDeThiDirect) {
             layDanhSachMonHoc().then(r => {
                 const arr = Array.isArray(r) ? r : (r?.data || []);
                 setMonHocList(arr);
@@ -71,7 +90,52 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
                 }
             }).catch(console.error);
         }
-    }, [fromMatrix]);
+    }, [fromMatrix, isDeThiDirect]);
+
+    // Load Ngân hàng (Chủ đề) khi chọn Môn học (dành cho isDeThiDirect)
+    useEffect(() => {
+        if (isDeThiDirect && deThiConfig.monHocId) {
+            layDanhSachNganHang().then(r => {
+                const arr = Array.isArray(r) ? r : (r?.data || []);
+                // Lọc ngân hàng theo môn học (nếu backend hỗ trợ, hoặc lọc trên frontend)
+                const filtered = arr.filter(nh => (nh.monHocId?._id || nh.monHocId) === deThiConfig.monHocId);
+                setNganHangList(filtered);
+                if (filtered.length > 0) {
+                    setSelectedChuDeId(filtered[0]._id || filtered[0].id);
+                } else {
+                    setSelectedChuDeId('');
+                }
+            }).catch(console.error);
+        }
+    }, [deThiConfig.monHocId, isDeThiDirect]);
+
+    // Load danh sách Lớp học nếu chọn gửi cho Lớp/Học Sinh
+    useEffect(() => {
+        if (deThiConfig.doiTuongThi !== 'TAT_CA' && availableLopHocs.length === 0) {
+            getDanhSachLopHoc().then(r => {
+                const arr = Array.isArray(r) ? r : (r?.data || []);
+                setAvailableLopHocs(arr);
+            }).catch(console.error);
+        }
+    }, [deThiConfig.doiTuongThi, availableLopHocs.length]);
+
+    // Fetch chi tiết lớp học (chứa học sinh) khi click expand
+    const handleExpandLopHoc = async (lopId) => {
+        if (expandedLopHocId === lopId) {
+            setExpandedLopHocId(null);
+            return;
+        }
+        setExpandedLopHocId(lopId);
+        if (!classStudentsInfo[lopId]) {
+            try {
+                const data = await getLopHocById(lopId);
+                const info = data?.data || data;
+                setClassStudentsInfo(prev => ({ ...prev, [lopId]: info }));
+            } catch (err) {
+                console.error("Lỗi lấy danh sách học sinh của lớp", err);
+            }
+        }
+    };
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -158,7 +222,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
         const file = e.target.files[0];
         if (!file) return;
 
-        if (!nganHangId) {
+        if (!nganHangId && !isDeThiDirect) {
             alert('Không thể upload vì không xác định được Ngân hàng hiện tại!');
             e.target.value = null;
             return;
@@ -166,25 +230,36 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
 
         try {
             setToastMessage('Đang xử lý file upload...');
-            const formData = new FormData();
-            formData.append('file', file);
+            let newText = '';
             
-            // Re-use API importFile từ nganHangService đã được tối ưu để chỉ trả về list câu hỏi
-            // chứ không lưu vào DB (bước import đầu tiên)
-            const result = await import('../../services/nganHangService').then(m => m.importFile(nganHangId, formData));
+            if (isDeThiDirect) {
+                const result = await parseFile(file);
+                newText = result?.data?.cauHois?.map((q, i) => 
+                    `Câu ${uploadMode === 'append' ? 1000 + i /* later recalculated */ : i + 1}. ${q.noiDung}\nA. ${q.luaChonA}\nB. ${q.luaChonB}\nC. ${q.luaChonC}\nD. ${q.luaChonD}\nĐáp án: ${q.dapAnDung}`
+                ).join('\n\n') || '';
+            } else {
+                const formData = new FormData();
+                formData.append('file', file);
+                const result = await import('../../services/nganHangService').then(m => m.importFile(nganHangId, formData));
+                newText = result?.data?.cauHois?.map((q, i) => 
+                    `Câu ${uploadMode === 'append' ? 1000 + i : i + 1}. ${q.noiDung}\nA. ${q.luaChonA}\nB. ${q.luaChonB}\nC. ${q.luaChonC}\nD. ${q.luaChonD}\nĐáp án: ${q.dapAnDung}`
+                ).join('\n\n') || '';
+            }
             
             setRawText(prev => {
                 const existingCount = prev ? (prev.match(/^Câu \d+\./gm) || []).length : 0;
-                const startIndex = uploadMode === 'append' ? existingCount : 0;
-                const newText = result?.data?.cauHois?.map((q, i) => 
-                    `Câu ${startIndex + i + 1}. ${q.noiDung}\nA. ${q.luaChonA}\nB. ${q.luaChonB}\nC. ${q.luaChonC}\nD. ${q.luaChonD}\nĐáp án: ${q.dapAnDung}`
-                ).join('\n\n') || '';
-
+                
+                // Recalculate numbering for the appended text
+                let finalTextToAdd = newText;
                 if (uploadMode === 'append') {
-                    return prev ? prev + '\n\n' + newText : newText;
+                    let counter = existingCount + 1;
+                    finalTextToAdd = newText.replace(/^Câu \d+\./gm, () => `Câu ${counter++}.`);
+                    return prev ? prev + '\n\n' + finalTextToAdd : finalTextToAdd;
                 } else {
                     if (setFileName) setFileName(file.name);
-                    return newText;
+                    let counter = 1;
+                    finalTextToAdd = newText.replace(/^Câu \d+\./gm, () => `Câu ${counter++}.`);
+                    return finalTextToAdd;
                 }
             });
             setToastMessage(null);
@@ -318,9 +393,208 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
                                 value={deThiConfig.moTa}
                                 onChange={(e) => setDeThiConfig({...deThiConfig, moTa: e.target.value})}
                                 placeholder="Nhập mô tả..."
-                                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', outline: 'none', fontSize: '0.9rem', minHeight: '120px', resize: 'vertical' }}
+                                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', outline: 'none', fontSize: '0.9rem', minHeight: '80px', resize: 'vertical' }}
                             />
                         </div>
+
+                        <div style={{ height: '1px', background: '#e5e7eb', margin: '0.5rem 0' }}></div>
+
+                        <div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontWeight: 500, color: '#374151', fontSize: '0.9rem' }}>
+                                Thời gian làm bài (phút) <span style={{ color: '#9ca3af', cursor: 'help' }}>&#9432;</span>
+                            </label>
+                            <input 
+                                type="number" 
+                                min="0"
+                                value={deThiConfig.thoiGianPhut}
+                                onChange={(e) => setDeThiConfig({...deThiConfig, thoiGianPhut: e.target.value})}
+                                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', outline: 'none', fontSize: '0.9rem' }}
+                            />
+                            <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: '#6b7280' }}>Nhập 0 để không giới hạn thời gian</p>
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontWeight: 500, color: '#374151', fontSize: '0.9rem' }}>
+                                Thời gian giao đề <span style={{ color: '#9ca3af', cursor: 'help' }}>&#9432;</span>
+                            </label>
+                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                <input 
+                                    type="datetime-local" 
+                                    value={deThiConfig.thoiGianMo}
+                                    onChange={(e) => setDeThiConfig({...deThiConfig, thoiGianMo: e.target.value})}
+                                    style={{ flex: 1, padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', outline: 'none', fontSize: '0.9rem' }}
+                                />
+                                <span style={{ color: '#6b7280', fontSize: '0.9rem' }}>Đến</span>
+                                <input 
+                                    type="datetime-local" 
+                                    value={deThiConfig.thoiGianDong}
+                                    onChange={(e) => setDeThiConfig({...deThiConfig, thoiGianDong: e.target.value})}
+                                    style={{ flex: 1, padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', outline: 'none', fontSize: '0.9rem' }}
+                                />
+                                <button 
+                                    onClick={() => setDeThiConfig({...deThiConfig, thoiGianMo: '', thoiGianDong: ''})}
+                                    style={{ padding: '0.75rem 1.5rem', background: '#fff', border: '1px solid #d1d5db', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#374151', fontWeight: 500 }}
+                                >
+                                    &#8635; Đặt lại
+                                </button>
+                            </div>
+                            <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: '#6b7280' }}>Chỉ được phép gia hạn thêm 'Thời gian giao đề' hoặc 'Thời gian làm bài'... Bỏ trống nếu không muốn giới hạn thời gian.</p>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '2rem' }}>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: '#1f2937', fontSize: '0.95rem' }}>Ai được phép làm</label>
+                                <p style={{ margin: '0', fontSize: '0.85rem', color: '#6b7280' }}>Lựa chọn này cho phép những học sinh không đăng ký/đăng nhập tài khoản vẫn có thể tham gia thi.</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                    <input type="radio" name="doiTuongThi" checked={deThiConfig.doiTuongThi === 'TAT_CA'} onChange={() => setDeThiConfig({...deThiConfig, doiTuongThi: 'TAT_CA'})} style={{ cursor: 'pointer' }}/> Tất cả mọi người
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                    <input type="radio" name="doiTuongThi" checked={deThiConfig.doiTuongThi === 'LOP_HOC'} onChange={() => setDeThiConfig({...deThiConfig, doiTuongThi: 'LOP_HOC'})} style={{ cursor: 'pointer' }}/> Giao theo lớp
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                    <input type="radio" name="doiTuongThi" checked={deThiConfig.doiTuongThi === 'HOC_SINH'} onChange={() => setDeThiConfig({...deThiConfig, doiTuongThi: 'HOC_SINH'})} style={{ cursor: 'pointer' }}/> Giao theo học sinh
+                                </label>
+                            </div>
+                        </div>
+
+                        {deThiConfig.doiTuongThi !== 'TAT_CA' && (
+                            <div style={{ border: '1px solid #d1d5db', borderRadius: '0.375rem', overflow: 'hidden' }}>
+                                <div style={{ display: 'flex', borderBottom: '1px solid #d1d5db', background: '#f9fafb', padding: '0.75rem', fontWeight: 500, fontSize: '0.9rem' }}>
+                                    <div style={{ flex: 1 }}>Danh sách lớp học</div>
+                                </div>
+                                <div style={{ maxHeight: '250px', overflowY: 'auto', background: '#fff' }}>
+                                    {availableLopHocs.map(lop => (
+                                        <div key={lop._id || lop.id}>
+                                            <div style={{ display: 'flex', alignItems: 'center', padding: '0.75rem 1rem', borderBottom: '1px solid #f3f4f6' }}>
+                                                {deThiConfig.doiTuongThi === 'HOC_SINH' && (
+                                                    <span 
+                                                        onClick={() => handleExpandLopHoc(lop._id || lop.id)}
+                                                        style={{ cursor: 'pointer', marginRight: '0.5rem', fontSize: '1.2rem', color: '#6b7280', width: '20px', textAlign: 'center' }}
+                                                    >
+                                                        {expandedLopHocId === (lop._id || lop.id) ? '▾' : '▸'}
+                                                    </span>
+                                                )}
+                                                
+                                                {deThiConfig.doiTuongThi === 'LOP_HOC' ? (
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={selectedLopHocIds.includes(lop._id || lop.id)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) setSelectedLopHocIds([...selectedLopHocIds, lop._id || lop.id]);
+                                                            else setSelectedLopHocIds(selectedLopHocIds.filter(id => id !== (lop._id || lop.id)));
+                                                        }}
+                                                        style={{ marginRight: '0.75rem', cursor: 'pointer' }}
+                                                    />
+                                                ) : (
+                                                    // Nếu chọn Học Sinh, lớp học đóng vai trò thư mục logic, có thể click check all sinh viên trong đó.
+                                                    <input 
+                                                        type="checkbox" 
+                                                        style={{ marginRight: '0.75rem', cursor: 'pointer' }}
+                                                        onChange={(e) => {
+                                                            const svs = classStudentsInfo[lop._id || lop.id]?.sinhVienIds || [];
+                                                            if (svs.length === 0) return;
+                                                            const svIds = svs.map(sv => sv._id || sv.id);
+                                                            if (e.target.checked) setSelectedSinhVienIds([...new Set([...selectedSinhVienIds, ...svIds])]);
+                                                            else setSelectedSinhVienIds(selectedSinhVienIds.filter(id => !svIds.includes(id)));
+                                                        }}
+                                                        disabled={!classStudentsInfo[lop._id || lop.id]}
+                                                        title={!classStudentsInfo[lop._id || lop.id] ? "Vui lòng mở rộng lớp để tải dữ liệu học sinh trước" : "Chọn tất cả"}
+                                                    />
+                                                )}
+                                                <span style={{ fontSize: '0.9rem', color: '#1f2937' }}>{lop.ten}</span>
+                                            </div>
+                                            
+                                            {/* Sub list học sinh */}
+                                            {deThiConfig.doiTuongThi === 'HOC_SINH' && expandedLopHocId === (lop._id || lop.id) && (
+                                                <div style={{ background: '#f8fafc', padding: '0.5rem 1rem 0.5rem 3rem', borderBottom: '1px solid #f3f4f6' }}>
+                                                    {classStudentsInfo[lop._id || lop.id] ? (
+                                                        classStudentsInfo[lop._id || lop.id].sinhVienIds.length > 0 ? (
+                                                            classStudentsInfo[lop._id || lop.id].sinhVienIds.map(sv => (
+                                                                <div key={sv._id || sv.id} style={{ display: 'flex', alignItems: 'center', padding: '0.25rem 0' }}>
+                                                                    <input 
+                                                                        type="checkbox" 
+                                                                        checked={selectedSinhVienIds.includes(sv._id || sv.id)}
+                                                                        onChange={(e) => {
+                                                                            if (e.target.checked) setSelectedSinhVienIds([...selectedSinhVienIds, sv._id || sv.id]);
+                                                                            else setSelectedSinhVienIds(selectedSinhVienIds.filter(id => id !== (sv._id || sv.id)));
+                                                                        }}
+                                                                        style={{ marginRight: '0.75rem', cursor: 'pointer' }}
+                                                                    />
+                                                                    <span style={{ fontSize: '0.85rem', color: '#374151' }}>{sv.ho} {sv.ten} ({sv.maNguoiDung || sv.email})</span>
+                                                                </div>
+                                                            ))
+                                                        ) : (
+                                                            <div style={{ fontSize: '0.85rem', color: '#9ca3af', fontStyle: 'italic' }}>Lớp không có học sinh nào</div>
+                                                        )
+                                                    ) : (
+                                                        <div style={{ fontSize: '0.85rem', color: '#9ca3af' }}>Đang tải dữ liệu...</div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {availableLopHocs.length === 0 && (
+                                        <div style={{ padding: '1rem', textAlign: 'center', fontSize: '0.9rem', color: '#6b7280' }}>Bạn chưa có lớp học nào</div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <div style={{ padding: '1.5rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}>
+                            <h4 style={{ margin: '0 0 1.5rem 0', color: '#374151', fontSize: '1rem', fontWeight: 600 }}>Điểm và đáp án khi làm xong</h4>
+                            
+                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+                                <div style={{ width: '220px', fontWeight: 500, fontSize: '0.9rem', color: '#4b5563' }}>Cho xem điểm</div>
+                                <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                        <input type="radio" checked={deThiConfig.cheDoXemDiem === 'KHONG'} onChange={() => setDeThiConfig({...deThiConfig, cheDoXemDiem: 'KHONG'})} /> Không
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                        <input type="radio" checked={deThiConfig.cheDoXemDiem === 'THI_XONG'} onChange={() => setDeThiConfig({...deThiConfig, cheDoXemDiem: 'THI_XONG'})} /> Khi làm bài xong
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                        <input type="radio" checked={deThiConfig.cheDoXemDiem === 'TAT_CA_XONG'} onChange={() => setDeThiConfig({...deThiConfig, cheDoXemDiem: 'TAT_CA_XONG'})} /> Khi tất cả thi xong
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                                <div style={{ width: '220px', fontWeight: 500, fontSize: '0.9rem', color: '#4b5563', marginTop: '0.2rem' }}>Cho xem đề thi và đáp án</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'center' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                        <input type="radio" checked={deThiConfig.cheDoXemDapAn === 'KHONG'} onChange={() => setDeThiConfig({...deThiConfig, cheDoXemDapAn: 'KHONG'})} /> Không
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                        <input type="radio" checked={deThiConfig.cheDoXemDapAn === 'THI_XONG'} onChange={() => setDeThiConfig({...deThiConfig, cheDoXemDapAn: 'THI_XONG'})} /> Khi làm bài xong
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                        <input type="radio" checked={deThiConfig.cheDoXemDapAn === 'TAT_CA_XONG'} onChange={() => setDeThiConfig({...deThiConfig, cheDoXemDapAn: 'TAT_CA_XONG'})} /> Khi tất cả thi xong
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem', color: '#3b82f6' }}>
+                                        <input type="radio" checked={deThiConfig.cheDoXemDapAn === 'DAT_DIEM'} onChange={() => setDeThiConfig({...deThiConfig, cheDoXemDapAn: 'DAT_DIEM'})} /> Khi đạt đến số điểm nhất định
+                                    </label>
+                                </div>
+                            </div>
+
+                            {deThiConfig.cheDoXemDapAn === 'DAT_DIEM' && (
+                                <div style={{ display: 'flex', alignItems: 'center', marginTop: '1rem', paddingLeft: '220px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                                        <label style={{ marginBottom: '0.25rem', fontSize: '0.85rem', color: '#4b5563' }}>Nhập số điểm được hiển thị đáp án</label>
+                                        <input 
+                                            type="number" 
+                                            min="0"
+                                            value={deThiConfig.diemToiThieuXemDapAn}
+                                            onChange={(e) => setDeThiConfig({...deThiConfig, diemToiThieuXemDapAn: e.target.value})}
+                                            style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', outline: 'none' }}
+                                        />
+                                        <span style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem' }}>Không được bỏ trống và vui lòng nhập điểm lớn hơn hoặc bằng 0</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
@@ -344,13 +618,31 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
 
                                 setIsSaving(true);
                                 try {
-                                    // Tổng hợp danh sách câu hỏi theo interface mới
-                                    // map từ generatedQuestions (array of objects chứa _id)
-                                    // và lấy scores nếu giáo viên có chia, mặc định 1
-                                    const listCauHoi = generatedQuestions.map((q, idx) => ({
-                                        cauHoiId: q._id || q.id,
-                                        diem: scores[idx] !== undefined ? parseFloat(scores[idx]) : 1
-                                    }));
+                                    let listCauHoi = [];
+                                    if (isDeThiDirect) {
+                                        // Pass raw questions immediately to generate CauHois in the backend
+                                        listCauHoi = parsedQuestions.map((q, qIdx) => {
+                                            const correctAns = q.answers.find(a => a.isCorrect);
+                                            const letters = ['A','B','C','D','E','F'];
+                                            return {
+                                                noiDung: q.title.includes('.') ? q.title.substring(q.title.indexOf('.') + 1).trim() : q.title,
+                                                loaiCauHoi: 'TRAC_NGHIEM',
+                                                doKho: questionLevels[qIdx] === 'Nhận biết' ? 'NB' : (questionLevels[qIdx] === 'Vận dụng' ? 'VD' : 'TH'),
+                                                dapAnDung: correctAns ? letters[q.answers.indexOf(correctAns)] : '',
+                                                luaChonA: q.answers[0]?.text || '',
+                                                luaChonB: q.answers[1]?.text || '',
+                                                luaChonC: q.answers[2]?.text || '',
+                                                luaChonD: q.answers[3]?.text || '',
+                                                diem: scores[qIdx] !== undefined ? parseFloat(scores[qIdx]) : 1
+                                            };
+                                        });
+                                    } else {
+                                        // Flow từ Ma trận cũ
+                                        listCauHoi = generatedQuestions.map((q, idx) => ({
+                                            cauHoiId: q._id || q.id,
+                                            diem: scores[idx] !== undefined ? parseFloat(scores[idx]) : 1
+                                        }));
+                                    }
 
                                     await taoDeThiTuMaTran({
                                         ten: deThiConfig.ten,
@@ -586,64 +878,68 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
                                         </div>
                                     )}
 
-                                    {/* Footer Require */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '2rem 0 1rem 0' }}>
-                                        <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
-                                        <span style={{ fontSize: '0.75rem', color: '#d97706', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Yêu cầu cần đạt</span>
-                                        <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
-                                    </div>
+                                    {/* Footer Require - HIDE for isDeThiDirect */}
+                                    {!isDeThiDirect && (
+                                        <>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '2rem 0 1rem 0' }}>
+                                                <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+                                                <span style={{ fontSize: '0.75rem', color: '#d97706', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Yêu cầu cần đạt</span>
+                                                <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+                                            </div>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        {!questionStandards[idx] ? (
-                                            <>
-                                                <span style={{ color: '#ef4444', fontSize: '1rem', fontWeight: 500 }}>*Vui lòng chọn yêu cầu cần đạt</span>
-                                                <span 
-                                                    onClick={() => { setEditingStandardIdx(idx); setIsStandardModalOpen(true); }}
-                                                    style={{ color: '#3b82f6', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: 500 }}
-                                                >
-                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                                    Sửa
-                                                </span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span style={{ color: '#4b5563', fontSize: '1rem', fontWeight: 500 }}>{questionStandards[idx].ten || questionStandards[idx].name}</span>
-                                                <span 
-                                                    onClick={() => { setEditingStandardIdx(idx); setIsStandardModalOpen(true); }}
-                                                    style={{ color: '#3b82f6', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: 500 }}
-                                                >
-                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                                    Sửa
-                                                </span>
-                                                <div style={{ position: 'relative' }}>
-                                                    <span 
-                                                        onClick={() => setActiveQuickApplyIdx(activeQuickApplyIdx === idx ? null : idx)}
-                                                        style={{ background: '#e5e7eb', color: '#1f2937', padding: '0.35rem 0.75rem', borderRadius: '1rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}
-                                                    >
-                                                        Áp dụng nhanh
-                                                    </span>
-                                                    
-                                                    {activeQuickApplyIdx === idx && (
-                                                        <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '0.5rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', width: '220px', zIndex: 60, overflow: 'hidden' }}>
-                                                            <div 
-                                                                onClick={() => {
-                                                                    const newSTDs = { ...questionStandards };
-                                                                    for (let i = idx; i < parsedQuestions.length; i++) {
-                                                                        newSTDs[i] = questionStandards[idx];
-                                                                    }
-                                                                    setQuestionStandards(newSTDs);
-                                                                    setActiveQuickApplyIdx(null);
-                                                                }}
-                                                                style={{ padding: '0.75rem 1rem', cursor: 'pointer', color: '#374151', fontSize: '0.95rem' }} onMouseEnter={(e) => { e.target.style.background = '#f9fafb'; }} onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                {!questionStandards[idx] ? (
+                                                    <>
+                                                        <span style={{ color: '#ef4444', fontSize: '1rem', fontWeight: 500 }}>*Vui lòng chọn yêu cầu cần đạt</span>
+                                                        <span 
+                                                            onClick={() => { setEditingStandardIdx(idx); setIsStandardModalOpen(true); }}
+                                                            style={{ color: '#3b82f6', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: 500 }}
+                                                        >
+                                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                            Sửa
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span style={{ color: '#4b5563', fontSize: '1rem', fontWeight: 500 }}>{questionStandards[idx].ten || questionStandards[idx].name}</span>
+                                                        <span 
+                                                            onClick={() => { setEditingStandardIdx(idx); setIsStandardModalOpen(true); }}
+                                                            style={{ color: '#3b82f6', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: 500 }}
+                                                        >
+                                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                            Sửa
+                                                        </span>
+                                                        <div style={{ position: 'relative' }}>
+                                                            <span 
+                                                                onClick={() => setActiveQuickApplyIdx(activeQuickApplyIdx === idx ? null : idx)}
+                                                                style={{ background: '#e5e7eb', color: '#1f2937', padding: '0.35rem 0.75rem', borderRadius: '1rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}
                                                             >
-                                                                Toàn bộ câu bên dưới
-                                                            </div>
+                                                                Áp dụng nhanh
+                                                            </span>
+                                                            
+                                                            {activeQuickApplyIdx === idx && (
+                                                                <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '0.5rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', width: '220px', zIndex: 60, overflow: 'hidden' }}>
+                                                                    <div 
+                                                                        onClick={() => {
+                                                                            const newSTDs = { ...questionStandards };
+                                                                            for (let i = idx; i < parsedQuestions.length; i++) {
+                                                                                newSTDs[i] = questionStandards[idx];
+                                                                            }
+                                                                            setQuestionStandards(newSTDs);
+                                                                            setActiveQuickApplyIdx(null);
+                                                                        }}
+                                                                        style={{ padding: '0.75rem 1rem', cursor: 'pointer', color: '#374151', fontSize: '0.95rem' }} onMouseEnter={(e) => { e.target.style.background = '#f9fafb'; }} onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
+                                                                    >
+                                                                        Toàn bộ câu bên dưới
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             );
                         })}
@@ -828,7 +1124,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
                                     onClick={() => { 
                                         setIsInfoModalOpen(false); 
                                         setIsFinalReviewPhase(false); 
-                                        if (fromMatrix) {
+                                        if (fromMatrix || isDeThiDirect) {
                                             setIsDeThiConfigStep(true);
                                         } else {
                                             setIsClassificationStep(true);
@@ -965,7 +1261,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
             {/* DUAL PANE */}
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                 {/* LEFT PANE - RENDERED CARDS */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '2rem', background: '#f8fafc' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '2rem', background: '#f8fafc', position: 'relative', zIndex: 10 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '850px', margin: '0 auto' }}>
                         {parsedQuestions.map((q, idx) => (
                             <div id={`question-${idx + 1}`} key={idx} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', overflow: 'hidden', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
@@ -992,6 +1288,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
                                     </span>
                                     <span style={{ color: '#9ca3af', cursor: 'pointer', display: 'flex', gap: '0.25rem', alignItems: 'center' }}>Trắc nghiệm <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
                                     
+                                    {/* Mức độ (Tag) Menu */}
                                     {/* Mức độ (Tag) Menu */}
                                     <div className="level-menu-container" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                         <span 
@@ -1088,7 +1385,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
                 </div>
 
                 {/* RIGHT PANE - RAW EDITOR */}
-                <div style={{ width: '50%', borderLeft: '1px solid #d1d5db', display: 'flex', flexDirection: 'column', background: '#fff' }}>
+                <div style={{ width: '50%', borderLeft: '1px solid #d1d5db', display: 'flex', flexDirection: 'column', background: '#fff', position: 'relative', zIndex: 1 }}>
                     <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                         {/* Line Numbers */}
                         <div 

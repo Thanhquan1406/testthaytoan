@@ -3,6 +3,7 @@
  */
 
 const deThiService = require('../../services/deThi.service');
+const { importDocx, importPdf } = require('../../services/importExport.service');
 const { success, created } = require('../../utils/apiResponse');
 
 const GV_ID = (req) => req.user.id;
@@ -183,22 +184,65 @@ const importFile = async (req, res, next) => {
 /** POST /api/giao-vien/de-thi/tao-tu-ma-tran */
 const taoTuMaTran = async (req, res, next) => {
   try {
-    const { ten, monHocId, moTa, questions } = req.body;
+    const { ten, monHocId, moTa, questions,
+      thoiGianPhut, thoiGianMo, thoiGianDong,
+      doiTuongThi, cheDoXemDiem, cheDoXemDapAn, diemToiThieuXemDapAn,
+      lopHocIds, sinhVienIds
+    } = req.body;
     
     // Tạo maDeThi ngẫu nhiên (ví dụ: DT + 6 số)
     const maDeThi = 'DT' + Math.floor(100000 + Math.random() * 900000);
+
+    let finalQuestions = [];
+    if (questions && questions.length > 0 && questions[0].noiDung) {
+      // Create orphan questions directly (no chuDeId, no nganHangId)
+      const CauHoi = require('../../models/CauHoi');
+      const docs = questions.map(q => ({
+         ...q,
+         nguoiDungId: GV_ID(req)
+      }));
+      const inserted = await CauHoi.insertMany(docs);
+      finalQuestions = inserted.map((c, i) => ({
+         cauHoiId: c._id,
+         diem: questions[i].diem || 1
+      }));
+    } else {
+      finalQuestions = questions;
+    }
 
     const payload = {
       ten,
       monHocId,
       moTa,
       maDeThi,
-      thoiGianPhut: 45, // default
-      cauHois: questions // mảng { cauHoiId, diem }
+      thoiGianPhut: thoiGianPhut !== undefined ? thoiGianPhut : 45, // default
+      thoiGianMo, thoiGianDong,
+      doiTuongThi, cheDoXemDiem, cheDoXemDapAn, diemToiThieuXemDapAn,
+      lopHocIds, sinhVienIds,
+      cauHois: finalQuestions // mảng { cauHoiId, diem }
     };
 
     const data = await deThiService.taoDeThi(GV_ID(req), payload);
     return created(res, data, 'Tạo đề thi từ ma trận thành công');
+  } catch (err) {
+    return next(err);
+  }
+};
+
+/** POST /api/giao-vien/de-thi/parse-file */
+const parseFileWithoutBank = async (req, res, next) => {
+  try {
+    if (!req.file) throw Object.assign(new Error('Vui lòng chọn file PDF hoặc DOCX'), { statusCode: 400 });
+    const ext = req.file.originalname.split('.').pop().toLowerCase();
+    let questions;
+    if (ext === 'docx' || ext === 'doc') {
+      questions = await importDocx(req.file.buffer);
+    } else if (ext === 'pdf') {
+      questions = await importPdf(req.file.buffer);
+    } else {
+      throw Object.assign(new Error('Định dạng file không được hỗ trợ. Chỉ hỗ trợ .docx và .pdf'), { statusCode: 400 });
+    }
+    return success(res, { cauHois: questions }, 'Đọc file thành công');
   } catch (err) {
     return next(err);
   }
@@ -210,5 +254,5 @@ module.exports = {
   addQuestions, removeQuestion,
   publishToClass, revokeFromClass,
   createPublicLink, revokePublicLink,
-  importFile, taoTuMaTran
+  importFile, taoTuMaTran, parseFileWithoutBank
 };

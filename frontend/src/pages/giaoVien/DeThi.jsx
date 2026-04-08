@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @fileoverview Quản lý đề thi (Giáo viên) - CRUD, import file PDF/DOCX.
  */
 import { useState, useRef } from 'react';
@@ -154,7 +154,7 @@ const DeThi = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Quản lý đề thi</h1>
         <button
-          type="button" onClick={openModal}
+          type="button" onClick={() => navigate('/giao-vien/de-thi/tao-moi')}
           style={{ padding: '0.5rem 1.25rem', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}
         >
           + Tạo đề thi

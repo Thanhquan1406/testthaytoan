@@ -41,6 +41,7 @@ router.delete('/de-thi/:id/xoa-han', deThiCtrl.forceDelete);
 
 // Import câu hỏi từ file PDF/DOCX vào đề thi
 router.post('/de-thi/:id/import', uploadImportMemory.single('file'), deThiCtrl.importFile);
+router.post('/de-thi/parse-file', uploadImportMemory.single('file'), deThiCtrl.parseFileWithoutBank);
 
 // Câu hỏi trong đề
 router.post('/de-thi/:id/cau-hoi', deThiCtrl.addQuestions);

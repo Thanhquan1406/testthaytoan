@@ -24,6 +24,8 @@ import AdminCauHoi from './pages/admin/CauHoi';
 // Giáo viên pages
 import GVDashboard from './pages/giaoVien/Dashboard';
 import GVDeThi from './pages/giaoVien/DeThi';
+import ChonPhuongThucTaoDe from './pages/giaoVien/ChonPhuongThucTaoDe';
+import TrangSoanThaoDeThi from './pages/giaoVien/TrangSoanThaoDeThi';
 import GVChinhSuaCauHoi from './pages/giaoVien/ChinhSuaCauHoi';
 import GVLopHoc from './pages/giaoVien/LopHoc';
 
@@ -142,6 +144,7 @@ const App = () => (
       <Route element={<ProtectedRoute requiredRole="GIAO_VIEN"><DashboardLayout navItems={GV_NAV} sidebarTitle="GIÁO VIÊN" /></ProtectedRoute>}>
         <Route path="/giao-vien" element={<GVDashboard />} />
         <Route path="/giao-vien/de-thi" element={<GVDeThi />} />
+        <Route path="/giao-vien/de-thi/tao-moi" element={<ChonPhuongThucTaoDe />} />
         <Route path="/giao-vien/de-thi/:deThiId/chinh-sua" element={<GVChinhSuaCauHoi />} />
         <Route path="/giao-vien/lop-hoc" element={<GVLopHoc />} />
         <Route path="/giao-vien/sinh-vien" element={<GVSinhVien />} />
@@ -171,6 +174,11 @@ const App = () => (
       </Route>
 
       {/* Trang làm bài - fullscreen không có sidebar */}
+      <Route path="/giao-vien/de-thi/editor" element={
+        <ProtectedRoute requiredRole={["ADMIN", "GIAO_VIEN"]}>
+          <TrangSoanThaoDeThi />
+        </ProtectedRoute>
+      } />
       <Route path="/sinh-vien/lam-bai/:phienThiId" element={
         <ProtectedRoute requiredRole="SINH_VIEN">
           <SVLamBai />

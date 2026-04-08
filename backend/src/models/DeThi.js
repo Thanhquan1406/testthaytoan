@@ -28,6 +28,15 @@ const lopHocTrongDeSchema = new mongoose.Schema(
   { _id: false }
 );
 
+/** Sub-document: sinh viên cụ thể được xuất bản đề */
+const sinhVienTrongDeSchema = new mongoose.Schema(
+  {
+    sinhVienId: { type: mongoose.Schema.Types.ObjectId, ref: 'NguoiDung', required: true },
+    thoiGianXuatBan: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 const deThiSchema = new mongoose.Schema(
   {
     monHocId: {
@@ -51,11 +60,31 @@ const deThiSchema = new mongoose.Schema(
     thoiGianPhut: {
       type: Number,
       required: [true, 'Thời gian làm bài không được để trống'],
-      min: [1, 'Thời gian tối thiểu 1 phút'],
+      min: [0, 'Thời gian không được âm'], // 0 = unlimited
     },
     /** Mã truy cập để thi qua link công khai */
     maTruyCap: { type: String, trim: true, default: null },
     duongDanTruyCap: { type: String, trim: true, default: null },
+
+    doiTuongThi: { 
+      type: String, 
+      enum: ['TAT_CA', 'LOP_HOC', 'HOC_SINH'], 
+      default: 'TAT_CA' 
+    },
+    cheDoXemDiem: { 
+      type: String, 
+      enum: ['KHONG', 'THI_XONG', 'TAT_CA_XONG'], 
+      default: 'THI_XONG' 
+    },
+    cheDoXemDapAn: { 
+      type: String, 
+      enum: ['KHONG', 'THI_XONG', 'TAT_CA_XONG', 'DAT_DIEM'], 
+      default: 'THI_XONG' 
+    },
+    diemToiThieuXemDapAn: { 
+      type: Number, 
+      default: 0 
+    },
 
     thoiGianMo: { type: Date, default: null },
     thoiGianDong: { type: Date, default: null },
@@ -81,6 +110,7 @@ const deThiSchema = new mongoose.Schema(
 
     cauHois: [cauHoiTrongDeSchema],
     lopHocIds: [lopHocTrongDeSchema],
+    sinhVienIds: [sinhVienTrongDeSchema],
 
     /** Soft delete: null = chưa xóa */
     deletedAt: { type: Date, default: null },

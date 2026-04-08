@@ -86,6 +86,8 @@ const taoDeThi = async (giaoVienId, data) => {
     monHocId, ten, moTa, thoiGianPhut, soLanThiToiDa,
     tronCauHoi, tronDapAn, choPhepXemLai, trangThai,
     thoiGianMo, thoiGianDong, thangDiemToiDa,
+    doiTuongThi, cheDoXemDiem, cheDoXemDapAn, diemToiThieuXemDapAn,
+    lopHocIds, sinhVienIds
   } = data;
 
   // Sinh mã đề tự động
@@ -101,6 +103,12 @@ const taoDeThi = async (giaoVienId, data) => {
     thoiGianMo: thoiGianMo || null,
     thoiGianDong: thoiGianDong || null,
     thangDiemToiDa: thangDiemToiDa || null,
+    doiTuongThi: doiTuongThi || 'TAT_CA',
+    cheDoXemDiem: cheDoXemDiem || 'THI_XONG',
+    cheDoXemDapAn: cheDoXemDapAn || 'THI_XONG',
+    diemToiThieuXemDapAn: diemToiThieuXemDapAn || 0,
+    lopHocIds: lopHocIds ? lopHocIds.map(id => ({ lopHocId: id })) : [],
+    sinhVienIds: sinhVienIds ? sinhVienIds.map(id => ({ sinhVienId: id })) : [],
     nguoiDungId: giaoVienId,
   });
 };
@@ -117,6 +125,8 @@ const capNhatDeThi = async (deThiId, giaoVienId, data) => {
     ten, moTa, thoiGianPhut, soLanThiToiDa, monHocId,
     tronCauHoi, tronDapAn, choPhepXemLai, trangThai,
     thoiGianMo, thoiGianDong, thangDiemToiDa,
+    doiTuongThi, cheDoXemDiem, cheDoXemDapAn, diemToiThieuXemDapAn,
+    lopHocIds, sinhVienIds
   } = data;
 
   const updated = await DeThi.findOneAndUpdate(
@@ -126,6 +136,12 @@ const capNhatDeThi = async (deThiId, giaoVienId, data) => {
         ten, moTa, thoiGianPhut, soLanThiToiDa, monHocId,
         tronCauHoi, tronDapAn, choPhepXemLai, trangThai,
         thoiGianMo, thoiGianDong, thangDiemToiDa,
+        ...(doiTuongThi !== undefined && { doiTuongThi }),
+        ...(cheDoXemDiem !== undefined && { cheDoXemDiem }),
+        ...(cheDoXemDapAn !== undefined && { cheDoXemDapAn }),
+        ...(diemToiThieuXemDapAn !== undefined && { diemToiThieuXemDapAn }),
+        ...(lopHocIds !== undefined && { lopHocIds: lopHocIds.map(id => ({ lopHocId: id })) }),
+        ...(sinhVienIds !== undefined && { sinhVienIds: sinhVienIds.map(id => ({ sinhVienId: id })) })
       },
     },
     { new: true, runValidators: true }
