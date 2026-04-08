@@ -49,7 +49,7 @@ const ChonPhuongThucTaoDe = () => {
     const handleDragOver = (e) => e.preventDefault();
 
     return (
-        <div style={{ padding: '1.5rem', background: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '1.5rem', background: 'var(--bg-surface-muted)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -58,7 +58,7 @@ const ChonPhuongThucTaoDe = () => {
                 accept=".doc,.docx,.txt"
             />
             <div 
-                style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', color: '#1f2937', gap: '0.5rem', marginBottom: '1.5rem', alignSelf: 'flex-start' }} 
+                style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', color: 'var(--text-primary)', gap: '0.5rem', marginBottom: '1.5rem', alignSelf: 'flex-start' }} 
                 onClick={() => navigate('/giao-vien/de-thi')}
             >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -66,10 +66,10 @@ const ChonPhuongThucTaoDe = () => {
             </div>
             
             <div style={{ maxWidth: '840px', width: '100%', margin: '0 auto', textAlign: 'center' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1f2937', marginBottom: '2rem' }}>Tạo đề thi mới</h2>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2rem' }}>Tạo đề thi mới</h2>
                 
                 <div 
-                    style={{ background: '#fff', borderRadius: '0.5rem', padding: '3.5rem 2rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', border: '1px solid #e5e7eb', cursor: 'pointer', position: 'relative' }}
+                    style={{ background: 'var(--bg-surface)', borderRadius: '0.5rem', padding: '3.5rem 2rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', border: '1px solid var(--border-default)', cursor: 'pointer', position: 'relative' }}
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
                     onClick={() => !isUploading && fileInputRef.current?.click()}
@@ -86,13 +86,13 @@ const ChonPhuongThucTaoDe = () => {
                         <line x1="12" y1="12" x2="12" y2="21"></line>
                         </svg>
                     </div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1f2937', marginBottom: '0.5rem' }}>Chọn File DOCX/PDF hoặc kéo thả File vào đây</h3>
-                    <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '0' }}>Hỗ trợ các định dạng .pdf, .docx</p>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Chọn File DOCX/PDF hoặc kéo thả File vào đây</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: '0' }}>Hỗ trợ các định dạng .pdf, .docx</p>
                 </div>
                 
                 <div style={{ display: 'flex', alignItems: 'center', margin: '2rem 0' }}>
                     <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
-                    <span style={{ padding: '0 1rem', color: '#6b7280', fontSize: '0.8rem', fontWeight: 600 }}>HOẶC</span>
+                    <span style={{ padding: '0 1rem', color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>HOẶC</span>
                     <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
                 </div>
                 
@@ -109,8 +109,8 @@ const ChonPhuongThucTaoDe = () => {
                         }}
                         style={{ 
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', 
-                        padding: '0.75rem 2rem', background: '#fff', border: '1px solid #e5e7eb', 
-                        borderRadius: '0.375rem', color: '#1f2937', fontWeight: 600, fontSize: '0.95rem',
+                        padding: '0.75rem 2rem', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', 
+                        borderRadius: '0.375rem', color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.95rem',
                         cursor: 'pointer', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
                         minWidth: '250px'
                     }}>
@@ -126,7 +126,7 @@ const ChonPhuongThucTaoDe = () => {
                         style={{ 
                         marginLeft: '1rem',
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', 
-                        padding: '0.75rem 2rem', background: '#fff', border: '1px solid #e5e7eb', 
+                        padding: '0.75rem 2rem', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', 
                         borderRadius: '0.375rem', color: '#1e40af', fontWeight: 600, fontSize: '0.95rem',
                         cursor: 'pointer', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
                         minWidth: '250px'

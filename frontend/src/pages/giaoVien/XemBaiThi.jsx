@@ -33,7 +33,7 @@ const XemBaiThi = () => {
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>
         Bài làm của: {phienThi?.nguoiDungId ? `${phienThi.nguoiDungId.ho} ${phienThi.nguoiDungId.ten}` : 'Ẩn danh'}
       </h1>
-      <div style={{ color: '#6b7280', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+      <div style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
         Điểm: <strong style={{ color: '#4f46e5' }}>{phienThi?.ketQua?.tongDiem?.toFixed(2) ?? '—'}</strong> •
         Nộp lúc: {phienThi?.thoiGianNop ? new Date(phienThi.thoiGianNop).toLocaleString('vi') : '—'} •
         Vi phạm: {phienThi?.viPhams?.length || 0} lần

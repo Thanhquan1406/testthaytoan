@@ -144,7 +144,7 @@ const XemNganHangCauHoi = () => {
           onContextMenu={(e) => handleContextMenu(e, structure)}
           style={{ 
             display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: '0.5rem',
-            background: '#fff', borderBottom: index === children.length - 1 && depth === 0 ? 'none' : '1px solid #f3f4f6', 
+            background: 'var(--bg-surface)', borderBottom: index === children.length - 1 && depth === 0 ? 'none' : '1px solid var(--border-default)', 
             padding: `0.75rem 1.25rem`, paddingLeft: `${1.25 + depth * 1.5}rem`
           }}
         >
@@ -166,8 +166,8 @@ const XemNganHangCauHoi = () => {
                 </div>
               )
             )}
-            <span style={{ fontSize: '0.95rem', fontWeight: 500, color: '#374151' }}>{structure.name}</span>
-            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+            <span style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)' }}>{structure.name}</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
               ({structure.questionCount} Câu hỏi
               {structure.questionCount > 0 ? `: ${structure.nb} NB - ${structure.th} TH - ${structure.vh} VD` : ''})
             </span>
@@ -176,7 +176,7 @@ const XemNganHangCauHoi = () => {
           <div style={{ position: 'relative' }}>
             <button 
               onClick={() => setActiveMenuId(activeMenuId === structure.id ? null : structure.id)}
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '0.25rem', display: 'flex', alignItems: 'center' }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="5" cy="12" r="1.5"></circle>
@@ -194,13 +194,13 @@ const XemNganHangCauHoi = () => {
                 />
                 <div style={{
                   position: 'absolute', right: 0, top: '100%', marginTop: '0.25rem',
-                  background: '#fff', borderRadius: '0.375rem', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
-                  border: '1px solid #e5e7eb', minWidth: 'max-content', zIndex: 50,
+                  background: 'var(--bg-surface)', borderRadius: '0.375rem', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
+                  border: '1px solid var(--border-default)', minWidth: 'max-content', zIndex: 50,
                   padding: '0.5rem 0'
                 }}>
                   <button 
                     onClick={() => handleOpenSubStructureModal(structure.id)}
-                    style={{ whiteSpace: 'nowrap', width: '100%', padding: '0.625rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.9rem', color: '#374151', textAlign: 'left', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
+                    style={{ whiteSpace: 'nowrap', width: '100%', padding: '0.625rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-primary)', textAlign: 'left', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     Thêm cấu trúc con
                   </button>
@@ -211,7 +211,7 @@ const XemNganHangCauHoi = () => {
                       setIsEditModalOpen(true);
                       setActiveMenuId(null);
                     }}
-                    style={{ whiteSpace: 'nowrap', width: '100%', padding: '0.625rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.9rem', color: '#374151', textAlign: 'left', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                    style={{ whiteSpace: 'nowrap', width: '100%', padding: '0.625rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-primary)', textAlign: 'left', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                     Sửa
@@ -246,7 +246,7 @@ const XemNganHangCauHoi = () => {
         <button 
           onClick={() => navigate('/ngan-hang/dashboard')}
           style={{ 
-            background: 'transparent', border: 'none', color: '#4b5563', cursor: 'pointer', 
+            background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', 
             display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600, fontSize: '0.9rem',
             padding: 0
           }}
@@ -260,8 +260,8 @@ const XemNganHangCauHoi = () => {
 
       {/* Tiêu đề & Ô tìm kiếm (nằm ngoài card trắng) */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#111827', margin: 0 }}>
-          {selectedBank.ten} <span style={{ color: '#9ca3af', fontSize: '0.875rem', fontWeight: 500 }}>
+        <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+          {selectedBank.ten} <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontWeight: 500 }}>
             {(() => {
               const rootStructures = structures.filter(s => !s.parentId);
               const totalQ = rootStructures.reduce((acc, s) => acc + s.questionCount, 0);
@@ -280,13 +280,13 @@ const XemNganHangCauHoi = () => {
             placeholder="Nhập mã câu hỏi" 
             style={{ 
               padding: '0.5rem 1rem', paddingRight: '2.5rem', borderRadius: '0.375rem', 
-              border: '1px solid #d1d5db', outline: 'none', width: '250px', fontSize: '0.875rem',
-              color: '#374151'
+              border: '1px solid var(--border-default)', outline: 'none', width: '250px', fontSize: '0.875rem',
+              color: 'var(--text-primary)'
             }}
             onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
             onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
           />
-          <svg style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
@@ -295,20 +295,20 @@ const XemNganHangCauHoi = () => {
 
       {/* Khối nội dung chính (White Card) */}
       <div style={{ 
-        background: '#fff', borderRadius: '0.5rem', border: '1px solid #e5e7eb', 
+        background: 'var(--bg-surface)', borderRadius: '0.5rem', border: '1px solid var(--border-default)', 
         flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden',
         minHeight: '60vh'
       }}>
         {/* Menu Tab và Nút chức năng */}
         <div style={{ 
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          borderBottom: '1px solid #e5e7eb', background: '#f9fafb' 
+          borderBottom: '1px solid var(--border-default)', background: 'var(--bg-surface-muted)' 
         }}>
           <div style={{ display: 'flex' }}>
             <button style={{ 
               padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', 
-              border: 'none', background: '#fff', borderRight: '1px solid #e5e7eb', 
-              color: '#111827', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' 
+              border: 'none', background: 'var(--bg-surface)', borderRight: '1px solid var(--border-default)', 
+              color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' 
             }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
               Cấu trúc
@@ -348,10 +348,10 @@ const XemNganHangCauHoi = () => {
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
               </svg>
             </div>
-            <h3 style={{ fontSize: '1.25rem', color: '#1f2937', fontWeight: 600, margin: 0, marginBottom: '0.5rem' }}>
+            <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', fontWeight: 600, margin: 0, marginBottom: '0.5rem' }}>
               Chưa có cấu trúc nào được tạo
             </h3>
-            <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0, marginBottom: '1.5rem' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0, marginBottom: '1.5rem' }}>
               Tạo cấu trúc để tổ chức câu hỏi theo chương, bài học
             </p>
             
@@ -375,8 +375,8 @@ const XemNganHangCauHoi = () => {
             </div>
           </div>
         ) : (
-          <div style={{ flex: 1, padding: '1.25rem', background: '#f9fafb' }}>
-            <div style={{ background: '#fff', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}>
+          <div style={{ flex: 1, padding: '1.25rem', background: 'var(--bg-surface-muted)' }}>
+            <div style={{ background: 'var(--bg-surface)', borderRadius: '0.5rem', border: '1px solid var(--border-default)' }}>
               {renderStructureTree()}
             </div>
           </div>
@@ -389,8 +389,8 @@ const XemNganHangCauHoi = () => {
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }} onClick={closeContextMenu} onContextMenu={(e) => { e.preventDefault(); closeContextMenu(); }} />
           <div style={{
             position: 'fixed', top: contextMenu.mouseY, left: contextMenu.mouseX, zIndex: 105,
-            background: '#fff', borderRadius: '0.375rem', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
-            border: '1px solid #e5e7eb', minWidth: '150px', padding: '0.25rem 0'
+            background: 'var(--bg-surface)', borderRadius: '0.375rem', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
+            border: '1px solid var(--border-default)', minWidth: '150px', padding: '0.25rem 0'
           }}>
             <button 
               onClick={() => {
@@ -398,7 +398,7 @@ const XemNganHangCauHoi = () => {
                 setIsStructureModalOpen(true);
                 closeContextMenu();
               }}
-              style={{ padding: '0.75rem 1rem', width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', fontSize: '0.9rem', color: '#1f2937' }}
+              style={{ padding: '0.75rem 1rem', width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', fontSize: '0.9rem', color: 'var(--text-primary)' }}
               onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'}
               onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
             >
@@ -419,15 +419,15 @@ const XemNganHangCauHoi = () => {
         onClick={() => { setIsStructureModalOpen(false); setIsDropdownOpen(false); }}
         >
           <div style={{
-            background: '#ffffff', width: '100%', maxWidth: '440px', 
+            background: 'var(--bg-surface)', width: '100%', maxWidth: '440px', 
             borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
             display: 'flex', flexDirection: 'column'
           }}
           onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div style={{ padding: '1.25rem', borderBottom: '1px solid #f3f4f6' }}>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#1f2937' }}>
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-default)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 Thêm cấu trúc
               </h3>
             </div>
@@ -437,7 +437,7 @@ const XemNganHangCauHoi = () => {
               
               {/* Input Tên Cấu Trúc */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1f2937' }}>Tên cấu trúc</label>
+                <label style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>Tên cấu trúc</label>
                 <input 
                   type="text" 
                   value={structureName}
@@ -448,7 +448,7 @@ const XemNganHangCauHoi = () => {
                     width: '100%', padding: '0.625rem 0.875rem', fontSize: '0.95rem',
                     border: !structureName ? '1px solid #f87171' : '1px solid #e2e8f0',
                     borderRadius: '0.375rem', 
-                    outline: 'none', color: '#1f2937'
+                    outline: 'none', color: 'var(--text-primary)'
                   }}
                   onFocus={(e) => e.target.style.borderColor = !structureName ? '#ef4444' : '#3b82f6'}
                   onBlur={(e) => e.target.style.borderColor = !structureName ? '#f87171' : '#e2e8f0'}
@@ -462,7 +462,7 @@ const XemNganHangCauHoi = () => {
 
               {/* Custom Select Dropdown Kiểu cấu trúc */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', position: 'relative' }}>
-                <label style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1f2937' }}>Kiểu cấu trúc</label>
+                <label style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>Kiểu cấu trúc</label>
                 
                 <div 
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -470,7 +470,7 @@ const XemNganHangCauHoi = () => {
                     width: '100%', padding: '0.625rem 0.875rem', fontSize: '0.95rem',
                     border: '1px solid #e2e8f0', borderRadius: '0.375rem', 
                     cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    background: '#fff', color: '#1f2937'
+                    background: 'var(--bg-surface)', color: 'var(--text-primary)'
                   }}
                 >
                   <span>{structureType}</span>
@@ -483,17 +483,17 @@ const XemNganHangCauHoi = () => {
                 {isDropdownOpen && (
                   <div style={{
                     position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '0.25rem',
-                    background: '#fff', borderRadius: '0.375rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                    border: '1px solid #e5e7eb', zIndex: 10
+                    background: 'var(--bg-surface)', borderRadius: '0.375rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                    border: '1px solid var(--border-default)', zIndex: 10
                   }}>
-                    <div style={{ padding: '0.625rem 0.875rem', borderBottom: '1px solid #f3f4f6' }}>
+                    <div style={{ padding: '0.625rem 0.875rem', borderBottom: '1px solid var(--border-default)' }}>
                       <input 
                         type="text" 
                         placeholder="Tìm kiếm ..." 
                         value={searchType}
                         onChange={(e) => setSearchType(e.target.value)}
                         style={{
-                          width: '100%', padding: '0', border: 'none', outline: 'none', fontSize: '0.95rem', color: '#4b5563', background: 'transparent'
+                          width: '100%', padding: '0', border: 'none', outline: 'none', fontSize: '0.95rem', color: 'var(--text-secondary)', background: 'transparent'
                         }}
                       />
                     </div>
@@ -509,8 +509,8 @@ const XemNganHangCauHoi = () => {
                           }}
                           style={{
                             padding: '0.875rem 1.25rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            background: structureType === opt ? '#f8fafc' : '#fff',
-                            color: structureType === opt ? '#4f46e5' : '#374151',
+                            background: structureType === opt ? 'var(--bg-surface-muted)' : 'var(--bg-surface)',
+                            color: structureType === opt ? '#4f46e5' : 'var(--text-primary)',
                             fontSize: '0.95rem'
                           }}
                           onMouseOver={(e) => {
@@ -536,14 +536,14 @@ const XemNganHangCauHoi = () => {
 
             {/* Footer Modal Thêm Cấu Trúc */}
             <div style={{ 
-              padding: '1.25rem', borderTop: '1px solid #f3f4f6', 
+              padding: '1.25rem', borderTop: '1px solid var(--border-default)', 
               display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' 
             }}>
               <button 
                 onClick={() => { setIsStructureModalOpen(false); setIsDropdownOpen(false); }}
                 style={{
                   padding: '0.5rem 1.25rem', fontSize: '0.9rem', fontWeight: 600,
-                  background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '0.375rem',
+                  background: 'var(--bg-page)', color: '#475569', border: 'none', borderRadius: '0.375rem',
                   cursor: 'pointer', transition: 'background 0.2s'
                 }}
                 onMouseOver={(e) => e.currentTarget.style.background = '#e2e8f0'}
@@ -580,22 +580,22 @@ const XemNganHangCauHoi = () => {
         onClick={() => setIsEditModalOpen(false)}
         >
           <div style={{
-            background: '#ffffff', width: '100%', maxWidth: '440px', 
+            background: 'var(--bg-surface)', width: '100%', maxWidth: '440px', 
             borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
             display: 'flex', flexDirection: 'column'
           }}
           onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div style={{ padding: '1.25rem', borderBottom: '1px solid #f3f4f6' }}>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#1f2937' }}>
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-default)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 Cập nhật cấu trúc
               </h3>
             </div>
             
             {/* Body */}
             <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', minHeight: '100px' }}>
-              <label style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1f2937' }}>Tên cấu trúc</label>
+              <label style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>Tên cấu trúc</label>
               <input 
                 type="text" 
                 value={editStructureName}
@@ -604,7 +604,7 @@ const XemNganHangCauHoi = () => {
                 style={{
                   width: '100%', padding: '0.625rem 0.875rem', fontSize: '1rem',
                   border: '1px solid #1f2937', borderRadius: '0.375rem', 
-                  outline: 'none', color: '#1f2937', fontWeight: 500
+                  outline: 'none', color: 'var(--text-primary)', fontWeight: 500
                 }}
                 onFocus={(e) => e.target.style.borderColor = '#1f2937'}
               />
@@ -612,14 +612,14 @@ const XemNganHangCauHoi = () => {
 
             {/* Footer */}
             <div style={{ 
-              padding: '1.25rem', borderTop: '1px solid #f3f4f6', 
+              padding: '1.25rem', borderTop: '1px solid var(--border-default)', 
               display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' 
             }}>
               <button 
                 onClick={() => setIsEditModalOpen(false)}
                 style={{
                   padding: '0.6rem 1.75rem', fontSize: '0.95rem', fontWeight: 600,
-                  background: '#f1f5f9', color: '#4b5563', border: 'none', borderRadius: '0.375rem',
+                  background: 'var(--bg-page)', color: 'var(--text-secondary)', border: 'none', borderRadius: '0.375rem',
                   cursor: 'pointer'
                 }}
               >
@@ -651,7 +651,7 @@ const XemNganHangCauHoi = () => {
         onClick={() => setIsDeleteModalOpen(false)}
         >
           <div style={{
-            background: '#ffffff', width: '100%', maxWidth: '520px', 
+            background: 'var(--bg-surface)', width: '100%', maxWidth: '520px', 
             borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
             display: 'flex', flexDirection: 'column'
           }}
@@ -665,7 +665,7 @@ const XemNganHangCauHoi = () => {
                 <line x1="10" y1="11" x2="10" y2="17"></line>
                 <line x1="14" y1="11" x2="14" y2="17"></line>
               </svg>
-              <div style={{ fontSize: '1.05rem', color: '#1f2937', lineHeight: 1.6 }}>
+              <div style={{ fontSize: '1.05rem', color: 'var(--text-primary)', lineHeight: 1.6 }}>
                 Bạn có chắc chắn muốn xóa khung kiến thức <span style={{ fontWeight: 700 }}>{targetStructure.name}</span>. Khi nhấn 
                 <span style={{ fontWeight: 700 }}> "Xác nhận"</span> toàn bộ nội dung trong khung kiến thức này cũng sẽ bị xóa?
               </div>
@@ -673,14 +673,14 @@ const XemNganHangCauHoi = () => {
 
             {/* Footer */}
             <div style={{ 
-              padding: '1.25rem 1.5rem', borderTop: '1px solid #f3f4f6', 
+              padding: '1.25rem 1.5rem', borderTop: '1px solid var(--border-default)', 
               display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' 
             }}>
               <button 
                 onClick={() => setIsDeleteModalOpen(false)}
                 style={{
                   padding: '0.625rem 1.75rem', fontSize: '0.95rem', fontWeight: 600,
-                  background: '#f1f5f9', color: '#4b5563', border: 'none', borderRadius: '0.375rem',
+                  background: 'var(--bg-page)', color: 'var(--text-secondary)', border: 'none', borderRadius: '0.375rem',
                   cursor: 'pointer'
                 }}
               >

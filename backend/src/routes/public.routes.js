@@ -17,31 +17,37 @@ router.post('/de-thi-link/:maTruyCap/bat-dau', deThiLinkCtrl.batDauAnDanh);
 router.get(
   '/thi-an-danh/phien/:phienThiId/noi-dung',
   thiAnDanhCtrl.verifyAnonymousToken,
+  thiAnDanhCtrl.ensureAnonymousSessionMatch,
   thiAnDanhCtrl.getNoiDung
 );
 router.post(
   '/thi-an-danh/phien/:phienThiId/luu',
   thiAnDanhCtrl.verifyAnonymousToken,
+  thiAnDanhCtrl.ensureAnonymousSessionMatch,
   thiAnDanhCtrl.luuTraLoi
 );
 router.post(
   '/thi-an-danh/phien/:phienThiId/nop-bai',
   thiAnDanhCtrl.verifyAnonymousToken,
+  thiAnDanhCtrl.ensureAnonymousSessionMatch,
   thiAnDanhCtrl.nopBai
 );
 router.post(
   '/thi-an-danh/phien/:phienThiId/vi-pham',
   thiAnDanhCtrl.verifyAnonymousToken,
+  thiAnDanhCtrl.ensureAnonymousSessionMatch,
   thiAnDanhCtrl.viPham
 );
 router.get(
   '/thi-an-danh/phien/:phienThiId/ket-qua',
   thiAnDanhCtrl.verifyAnonymousToken,
+  thiAnDanhCtrl.ensureAnonymousSessionMatch,
   thiAnDanhCtrl.getKetQua
 );
 router.get(
   '/thi-an-danh/phien/:phienThiId/chi-tiet',
   thiAnDanhCtrl.verifyAnonymousToken,
+  thiAnDanhCtrl.ensureAnonymousSessionMatch,
   thiAnDanhCtrl.getChiTiet
 );
 

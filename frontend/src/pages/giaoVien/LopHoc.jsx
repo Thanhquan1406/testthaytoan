@@ -37,7 +37,7 @@ const StudentPicker = ({ selectedSVs, setSelectedSVs }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>
           Thêm Sinh Viên
-          <span style={{ fontWeight: 400, color: '#6b7280', marginLeft: '4px' }}>(tuỳ chọn)</span>
+          <span style={{ fontWeight: 400, color: 'var(--text-secondary)', marginLeft: '4px' }}>(tuỳ chọn)</span>
         </label>
         {selectedSVs.length > 0 && (
           <span style={{ fontSize: '0.78rem', color: '#4f46e5', fontWeight: 600 }}>
@@ -53,22 +53,22 @@ const StudentPicker = ({ selectedSVs, setSelectedSVs }) => {
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           placeholder="Tìm theo tên, email, mã sinh viên..."
-          style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2.25rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', boxSizing: 'border-box', fontSize: '0.875rem' }}
+          style={{ width: '100%', padding: '0.5rem 0.75rem 0.5rem 2.25rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', boxSizing: 'border-box', fontSize: '0.875rem' }}
         />
-        <span style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }}>🔍</span>
+        <span style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', pointerEvents: 'none' }}>🔍</span>
         {isFetching && (
-          <span style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: '#9ca3af' }}>Đang tìm...</span>
+          <span style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Đang tìm...</span>
         )}
       </div>
 
       {/* Results */}
-      <div style={{ maxHeight: '190px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '0.5rem', background: '#fff' }}>
+      <div style={{ maxHeight: '190px', overflowY: 'auto', border: '1px solid var(--border-default)', borderRadius: '0.5rem', background: 'var(--bg-surface)' }}>
         {isFetching && results.length === 0 ? (
-          <p style={{ margin: 0, padding: '0.75rem 1rem', color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center' }}>
+          <p style={{ margin: 0, padding: '0.75rem 1rem', color: 'var(--text-secondary)', fontSize: '0.875rem', textAlign: 'center' }}>
             Đang tải danh sách sinh viên...
           </p>
         ) : results.length === 0 ? (
-          <p style={{ margin: 0, padding: '0.75rem 1rem', color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center' }}>
+          <p style={{ margin: 0, padding: '0.75rem 1rem', color: 'var(--text-secondary)', fontSize: '0.875rem', textAlign: 'center' }}>
             Không tìm thấy sinh viên phù hợp
           </p>
         ) : (
@@ -77,17 +77,17 @@ const StudentPicker = ({ selectedSVs, setSelectedSVs }) => {
             return (
               <label
                 key={sv._id}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.55rem 1rem', cursor: 'pointer', background: sel ? '#ede9fe' : 'transparent', borderBottom: '1px solid #f3f4f6' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.55rem 1rem', cursor: 'pointer', background: sel ? '#ede9fe' : 'transparent', borderBottom: '1px solid var(--border-default)' }}
               >
                 <input
                   type="checkbox" checked={sel} onChange={() => toggle(sv)}
                   style={{ width: '15px', height: '15px', cursor: 'pointer', flexShrink: 0, accentColor: '#4f46e5' }}
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 500, fontSize: '0.875rem', color: sel ? '#4338ca' : '#111827' }}>
+                  <div style={{ fontWeight: 500, fontSize: '0.875rem', color: sel ? '#4338ca' : 'var(--text-primary)' }}>
                     {sv.ho} {sv.ten}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {sv.maNguoiDung} • {sv.email}
                   </div>
                 </div>
@@ -101,7 +101,7 @@ const StudentPicker = ({ selectedSVs, setSelectedSVs }) => {
       {/* Selected chips */}
       {selectedSVs.length > 0 && (
         <div>
-          <p style={{ fontSize: '0.8rem', fontWeight: 500, color: '#374151', margin: '0 0 5px' }}>
+          <p style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 5px' }}>
             Sinh viên trong lớp ({selectedSVs.length}):
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
@@ -233,9 +233,9 @@ const LopHoc = () => {
       {/* Danh sách lớp */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '1rem' }}>
         {danhSachLop?.map((l) => (
-          <div key={l._id} style={{ background: '#fff', padding: '1.25rem', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div key={l._id} style={{ background: 'var(--bg-surface)', padding: '1.25rem', borderRadius: '0.75rem', boxShadow: 'var(--shadow)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <h3 style={{ fontWeight: 700, fontSize: '1rem', margin: 0 }}>{l.ten}</h3>
-            <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
               Ngày tạo: {new Date(l.thoiGianTao).toLocaleDateString('vi-VN')}
             </p>
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
@@ -261,7 +261,7 @@ const LopHoc = () => {
           </div>
         ))}
         {!danhSachLop?.length && (
-          <p style={{ color: '#9ca3af', gridColumn: '1/-1', textAlign: 'center', padding: '2rem' }}>Chưa có lớp học nào</p>
+          <p style={{ color: 'var(--text-secondary)', gridColumn: '1/-1', textAlign: 'center', padding: '2rem' }}>Chưa có lớp học nào</p>
         )}
       </div>
 
@@ -275,7 +275,7 @@ const LopHoc = () => {
           <>
             <button
               type="button" onClick={closeModal} disabled={isPending}
-              style={{ padding: '0.5rem 1rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', background: '#fff', cursor: 'pointer' }}
+              style={{ padding: '0.5rem 1rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', background: 'var(--bg-surface)', cursor: 'pointer' }}
             >
               Hủy
             </button>
@@ -295,7 +295,7 @@ const LopHoc = () => {
         }
       >
         {mode === 'edit' && loadingDetail ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>Đang tải dữ liệu lớp...</div>
+          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Đang tải dữ liệu lớp...</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
             <div>
@@ -304,7 +304,7 @@ const LopHoc = () => {
                 autoFocus
                 type="text" value={ten} onChange={(e) => setTen(e.target.value)}
                 placeholder="Ví dụ: Lớp Toán 10A1"
-                style={{ width: '100%', marginTop: '4px', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', boxSizing: 'border-box' }}
+                style={{ width: '100%', marginTop: '4px', padding: '0.5rem 0.75rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', boxSizing: 'border-box' }}
               />
             </div>
 
@@ -335,20 +335,20 @@ const LopHoc = () => {
         }
       >
         {loadingDetail ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>Đang tải...</div>
+          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Đang tải...</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <div style={{ background: '#f9fafb', padding: '0.75rem 1rem', borderRadius: '0.5rem' }}>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Tên lớp</div>
+              <div style={{ background: 'var(--bg-surface-muted)', padding: '0.75rem 1rem', borderRadius: '0.5rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>Tên lớp</div>
                 <div style={{ fontWeight: 600 }}>{lopDetail?.ten}</div>
               </div>
-              <div style={{ background: '#f9fafb', padding: '0.75rem 1rem', borderRadius: '0.5rem' }}>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Số sinh viên</div>
+              <div style={{ background: 'var(--bg-surface-muted)', padding: '0.75rem 1rem', borderRadius: '0.5rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>Số sinh viên</div>
                 <div style={{ fontWeight: 600 }}>{lopDetail?.sinhVienIds?.length ?? 0}</div>
               </div>
-              <div style={{ background: '#f9fafb', padding: '0.75rem 1rem', borderRadius: '0.5rem', gridColumn: '1/-1' }}>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>Ngày tạo</div>
+              <div style={{ background: 'var(--bg-surface-muted)', padding: '0.75rem 1rem', borderRadius: '0.5rem', gridColumn: '1/-1' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>Ngày tạo</div>
                 <div style={{ fontWeight: 600 }}>
                   {lopDetail?.thoiGianTao ? new Date(lopDetail.thoiGianTao).toLocaleDateString('vi-VN') : '—'}
                 </div>
@@ -356,28 +356,28 @@ const LopHoc = () => {
             </div>
 
             <div>
-              <p style={{ fontSize: '0.875rem', fontWeight: 600, margin: '0 0 8px', color: '#374151' }}>
+              <p style={{ fontSize: '0.875rem', fontWeight: 600, margin: '0 0 8px', color: 'var(--text-primary)' }}>
                 Danh sách sinh viên ({lopDetail?.sinhVienIds?.length ?? 0})
               </p>
               {!lopDetail?.sinhVienIds?.length ? (
-                <p style={{ color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center', padding: '1rem' }}>Chưa có sinh viên nào trong lớp</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', textAlign: 'center', padding: '1rem' }}>Chưa có sinh viên nào trong lớp</p>
               ) : (
-                <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', overflow: 'hidden' }}>
+                <div style={{ border: '1px solid var(--border-default)', borderRadius: '0.5rem', overflow: 'hidden' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
                     <thead>
-                      <tr style={{ background: '#f9fafb' }}>
+                      <tr style={{ background: 'var(--bg-surface-muted)' }}>
                         {['#', 'Họ tên', 'Mã SV', 'Email'].map((h) => (
-                          <th key={h} style={{ padding: '0.6rem 0.75rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', whiteSpace: 'nowrap' }}>{h}</th>
+                          <th key={h} style={{ padding: '0.6rem 0.75rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {lopDetail.sinhVienIds.map((sv, i) => (
-                        <tr key={sv._id} style={{ borderTop: '1px solid #f3f4f6' }}>
-                          <td style={{ padding: '0.6rem 0.75rem', color: '#9ca3af' }}>{i + 1}</td>
+                        <tr key={sv._id} style={{ borderTop: '1px solid var(--border-default)' }}>
+                          <td style={{ padding: '0.6rem 0.75rem', color: 'var(--text-secondary)' }}>{i + 1}</td>
                           <td style={{ padding: '0.6rem 0.75rem', fontWeight: 500 }}>{sv.ho} {sv.ten}</td>
-                          <td style={{ padding: '0.6rem 0.75rem', color: '#6b7280' }}>{sv.maNguoiDung}</td>
-                          <td style={{ padding: '0.6rem 0.75rem', color: '#6b7280' }}>{sv.email}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', color: 'var(--text-secondary)' }}>{sv.maNguoiDung}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', color: 'var(--text-secondary)' }}>{sv.email}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -399,7 +399,7 @@ const LopHoc = () => {
           <>
             <button
               type="button" onClick={() => setConfirmDelete(null)} disabled={deleteMutation.isPending}
-              style={{ padding: '0.5rem 1rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', background: '#fff', cursor: 'pointer' }}
+              style={{ padding: '0.5rem 1rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', background: 'var(--bg-surface)', cursor: 'pointer' }}
             >
               Hủy
             </button>
@@ -417,7 +417,7 @@ const LopHoc = () => {
         <p style={{ margin: 0, lineHeight: 1.6 }}>
           Bạn có chắc muốn xóa lớp <strong>{confirmDelete?.ten}</strong>?
           <br />
-          <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Hành động này không thể hoàn tác.</span>
+          <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Hành động này không thể hoàn tác.</span>
         </p>
         {deleteMutation.isError && (
           <p style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.75rem', background: '#fef2f2', padding: '0.5rem 0.75rem', borderRadius: '0.375rem' }}>

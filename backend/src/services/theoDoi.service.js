@@ -27,14 +27,16 @@ const layDanhSachTheoDoi = async (giaoVienId, deThiId, query) => {
   const phienThis = await PhienThi.find(filter)
     .populate('nguoiDungId', 'maNguoiDung ho ten email')
     .populate('lopHocId', 'ten')
-    .select('nguoiDungId hoTenAnDanh trangThai thoiGianBatDau thoiGianNop viPhams ketQua lopHocId')
+    .select('nguoiDungId hoTenAnDanh trangThai thoiGianBatDau thoiGianNop viPhams ketQua lopHocId cauTraLois')
     .sort({ thoiGianBatDau: -1 })
     .lean();
 
-  const normalized = phienThis.map((p) => ({
-    ...p,
-    soViPham: p.viPhams?.length || 0,
-    viPhamGanNhat: p.viPhams?.at(-1) || null,
+  const normalized = phienThis.map(({ cauTraLois, viPhams, ...rest }) => ({
+    ...rest,
+    soViPham: viPhams?.length || 0,
+    viPhamGanNhat: viPhams?.at(-1) || null,
+    soCauDaTraLoi: cauTraLois?.filter((c) => c.noiDungTraLoi).length || 0,
+    tongSoCau: cauTraLois?.length || 0,
   }));
 
   // Tìm kiếm theo tên

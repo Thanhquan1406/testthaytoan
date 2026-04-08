@@ -40,16 +40,16 @@ const INIT_EDIT_FORM = {
 
 const inputStyle = {
   width: '100%', marginTop: '4px', padding: '0.5rem 0.75rem',
-  border: '1px solid #d1d5db', borderRadius: '0.5rem', boxSizing: 'border-box',
+  border: '1px solid var(--border-default)', borderRadius: '0.5rem', boxSizing: 'border-box',
   fontSize: '0.875rem',
 };
-const labelStyle = { fontSize: '0.875rem', fontWeight: 500, color: '#374151', display: 'block' };
+const labelStyle = { fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)', display: 'block' };
 
 const FormRow = ({ label, children, hint }) => (
   <div>
     <label style={labelStyle}>{label}</label>
     {children}
-    {hint && <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#6b7280' }}>{hint}</p>}
+    {hint && <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{hint}</p>}
   </div>
 );
 
@@ -57,7 +57,7 @@ const FormRow = ({ label, children, hint }) => (
 const RadioGroup = ({ name, value, onChange, options }) => (
   <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '6px' }}>
     {options.map((opt) => (
-      <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.875rem', color: '#374151' }}>
+      <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--text-primary)' }}>
         <input
           type="radio" name={name} value={opt.value} checked={value === opt.value}
           onChange={() => onChange(opt.value)}
@@ -344,13 +344,13 @@ const DeThi = () => {
         {deThiList?.data?.map((d) => (
           <div
             key={d._id}
-            style={{ background: '#fff', padding: '1rem 1.25rem', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            style={{ background: 'var(--bg-surface)', padding: '1rem 1.25rem', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
           >
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <span style={{ fontWeight: 600 }}>{d.ten}</span>
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '2px' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                 {d.monHocId?.ten} • {d.thoiGianPhut} phút • {d.cauHois?.length || 0} câu
               </div>
             </div>
@@ -391,7 +391,7 @@ const DeThi = () => {
           </div>
         ))}
         {!deThiList?.data?.length && (
-          <p style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem' }}>Chưa có đề thi nào. Tạo đề thi đầu tiên!</p>
+          <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>Chưa có đề thi nào. Tạo đề thi đầu tiên!</p>
         )}
       </div>
 
@@ -405,7 +405,7 @@ const DeThi = () => {
           <>
             <button
               type="button" onClick={closeModal} disabled={createMutation.isPending}
-              style={{ padding: '0.5rem 1rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', background: '#fff', cursor: 'pointer' }}
+              style={{ padding: '0.5rem 1rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', background: 'var(--bg-surface)', cursor: 'pointer' }}
             >
               Hủy
             </button>
@@ -429,7 +429,7 @@ const DeThi = () => {
 
           <FormRow label="Môn Học *">
             {loadingMon ? (
-              <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Đang tải...</p>
+              <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Đang tải...</p>
             ) : (
               <>
                 <select value={form.monHocId} onChange={set('monHocId')} style={inputStyle}>
@@ -470,17 +470,17 @@ const DeThi = () => {
             <input id="xem-lai" type="checkbox" checked={form.choPhepXemLai} onChange={set('choPhepXemLai')} style={{ marginTop: '2px', width: '16px', height: '16px', cursor: 'pointer', flexShrink: 0, accentColor: '#4f46e5' }} />
             <label htmlFor="xem-lai" style={{ cursor: 'pointer' }}>
               <span style={{ fontWeight: 500, fontSize: '0.875rem' }}>Cho phép sinh viên xem lại chi tiết từng câu sau khi nộp bài</span>
-              <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#6b7280' }}>
+              <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                 Tắt nếu chỉ muốn hiển thị điểm/tóm tắt, không cho xem đáp án từng câu.
               </p>
             </label>
           </div>
 
           {/* ── Phần import file ── */}
-          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '1rem' }}>
-            <p style={{ margin: '0 0 0.75rem', fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>
+          <div style={{ borderTop: '1px solid var(--border-default)', paddingTop: '1rem' }}>
+            <p style={{ margin: '0 0 0.75rem', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
               Nhập câu hỏi từ file
-              <span style={{ marginLeft: '6px', fontSize: '0.75rem', fontWeight: 400, color: '#6b7280' }}>(tuỳ chọn)</span>
+              <span style={{ marginLeft: '6px', fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-secondary)' }}>(tuỳ chọn)</span>
             </p>
 
             <div style={{ marginBottom: '0.75rem' }}>
@@ -489,9 +489,9 @@ const DeThi = () => {
                 {hasFile && <span style={{ color: '#dc2626' }}> *</span>}
               </label>
               {!form.monHocId ? (
-                <p style={{ margin: '4px 0 0', fontSize: '0.8125rem', color: '#9ca3af' }}>Chọn môn học trước để hiển thị chủ đề</p>
+                <p style={{ margin: '4px 0 0', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>Chọn môn học trước để hiển thị chủ đề</p>
               ) : loadingChuDe ? (
-                <p style={{ margin: '4px 0 0', fontSize: '0.8125rem', color: '#6b7280' }}>Đang tải chủ đề...</p>
+                <p style={{ margin: '4px 0 0', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>Đang tải chủ đề...</p>
               ) : (
                 <>
                   <select value={chuDeId} onChange={(e) => setChuDeId(e.target.value)} style={inputStyle}>
@@ -529,7 +529,7 @@ const DeThi = () => {
                   <span style={{ fontSize: '1.25rem' }}>📄</span>
                   <div>
                     <p style={{ margin: 0, fontWeight: 500, color: '#059669', fontSize: '0.875rem' }}>{importFileObj.name}</p>
-                    <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#6b7280' }}>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                       {(importFileObj.size / 1024).toFixed(0)} KB
                       {' · '}
                       <button
@@ -552,7 +552,7 @@ const DeThi = () => {
                   >
                     Chọn File PDF/DOCX
                   </button>
-                  <p style={{ margin: 0, fontSize: '0.8125rem', color: '#9ca3af' }}>Kéo thả file vào đây hoặc nhấn nút trên</p>
+                  <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>Kéo thả file vào đây hoặc nhấn nút trên</p>
                   <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: '#d1d5db' }}>PDF, DOCX · tối đa 10MB</p>
                 </>
               )}
@@ -565,10 +565,10 @@ const DeThi = () => {
             )}
 
             <details style={{ marginTop: '0.75rem' }}>
-              <summary style={{ fontSize: '0.8125rem', color: '#6b7280', cursor: 'pointer', userSelect: 'none' }}>
+              <summary style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
                 Xem định dạng file được hỗ trợ
               </summary>
-              <pre style={{ margin: '0.5rem 0 0', padding: '0.75rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.375rem', fontSize: '0.75rem', color: '#374151', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+              <pre style={{ margin: '0.5rem 0 0', padding: '0.75rem', background: 'var(--bg-surface-muted)', border: '1px solid var(--border-default)', borderRadius: '0.375rem', fontSize: '0.75rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
 {`Câu 1: Nội dung câu hỏi?
 A. Lựa chọn A
 B. Lựa chọn B
@@ -604,7 +604,7 @@ D) Phương án D
           <>
             <button
               type="button" onClick={closeEditModal} disabled={updateMutation.isPending}
-              style={{ padding: '0.5rem 1.25rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', background: '#fff', cursor: 'pointer', fontSize: '0.875rem' }}
+              style={{ padding: '0.5rem 1.25rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', background: 'var(--bg-surface)', cursor: 'pointer', fontSize: '0.875rem' }}
             >
               Hủy
             </button>
@@ -644,7 +644,7 @@ D) Phương án D
           {/* Môn học */}
           <FormRow label="Môn học">
             {loadingMon ? (
-              <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Đang tải...</p>
+              <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Đang tải...</p>
             ) : (
               <select value={editForm.monHocId} onChange={setEdit('monHocId')} style={inputStyle}>
                 <option value="">-- Chọn môn học --</option>
@@ -665,27 +665,27 @@ D) Phương án D
           <div>
             <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
               Thời gian làm bài (phút)
-              <span title="Nhập 0 để không giới hạn thời gian làm bài" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '50%', background: '#e5e7eb', color: '#6b7280', fontSize: '0.65rem', fontWeight: 700, cursor: 'default' }}>i</span>
+              <span title="Nhập 0 để không giới hạn thời gian làm bài" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '50%', background: '#e5e7eb', color: 'var(--text-secondary)', fontSize: '0.65rem', fontWeight: 700, cursor: 'default' }}>i</span>
             </label>
             <input
               type="number" min={0} value={editForm.thoiGianPhut} onChange={setEdit('thoiGianPhut')}
               style={{ ...inputStyle, width: '180px' }}
             />
-            <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#6b7280' }}>Nhập 0 để không giới hạn thời gian</p>
+            <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Nhập 0 để không giới hạn thời gian</p>
           </div>
 
           {/* Thời gian giao đề */}
           <div>
             <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
               Thời gian giao đề
-              <span title="Khoảng thời gian học sinh có thể bắt đầu làm bài" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '50%', background: '#e5e7eb', color: '#6b7280', fontSize: '0.65rem', fontWeight: 700, cursor: 'default' }}>i</span>
+              <span title="Khoảng thời gian học sinh có thể bắt đầu làm bài" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '50%', background: '#e5e7eb', color: 'var(--text-secondary)', fontSize: '0.65rem', fontWeight: 700, cursor: 'default' }}>i</span>
             </label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '4px', flexWrap: 'wrap' }}>
               <input
                 type="datetime-local" value={editForm.thoiGianMo} onChange={setEdit('thoiGianMo')}
                 style={{ ...inputStyle, width: 'auto', flex: 1, minWidth: '180px' }}
               />
-              <span style={{ fontSize: '0.875rem', color: '#6b7280', whiteSpace: 'nowrap' }}>Đến</span>
+              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Đến</span>
               <input
                 type="datetime-local" value={editForm.thoiGianDong} onChange={setEdit('thoiGianDong')}
                 style={{ ...inputStyle, width: 'auto', flex: 1, minWidth: '180px' }}
@@ -693,12 +693,12 @@ D) Phương án D
               <button
                 type="button"
                 onClick={() => setEditForm((p) => ({ ...p, thoiGianMo: '', thoiGianDong: '' }))}
-                style={{ padding: '0.45rem 0.875rem', background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.8125rem', whiteSpace: 'nowrap' }}
+                style={{ padding: '0.45rem 0.875rem', background: 'var(--bg-surface-muted)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.8125rem', whiteSpace: 'nowrap' }}
               >
                 ↺ Đặt lại
               </button>
             </div>
-            <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#6b7280' }}>
+            <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
               Bỏ trống nếu không muốn giới hạn thời gian giao đề.
             </p>
           </div>
@@ -717,25 +717,25 @@ D) Phương án D
               ]}
             />
             {editForm.doiTuongThi === 'TAT_CA' && (
-              <p style={{ margin: '5px 0 0', fontSize: '0.78rem', color: '#6b7280' }}>
+              <p style={{ margin: '5px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                 Lựa chọn này cho phép những học sinh không đăng ký/đăng nhập tài khoản vẫn có thể tham gia thi.
               </p>
             )}
             {editForm.doiTuongThi === 'GIAO_THEO_LOP' && (
-              <div style={{ marginTop: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', overflow: 'hidden' }}>
-                <div style={{ background: '#f9fafb', padding: '0.625rem 0.875rem', borderBottom: '1px solid #e5e7eb', fontSize: '0.9rem', fontWeight: 600, color: '#374151' }}>
+              <div style={{ marginTop: '0.75rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', overflow: 'hidden' }}>
+                <div style={{ background: 'var(--bg-surface-muted)', padding: '0.625rem 0.875rem', borderBottom: '1px solid var(--border-default)', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                   Danh sách lớp học
                 </div>
-                <div style={{ maxHeight: '180px', overflowY: 'auto', background: '#fff' }}>
+                <div style={{ maxHeight: '180px', overflowY: 'auto', background: 'var(--bg-surface)' }}>
                   {loadingLopHoc ? (
-                    <p style={{ margin: 0, padding: '0.75rem 0.875rem', color: '#6b7280', fontSize: '0.875rem' }}>Đang tải danh sách lớp...</p>
+                    <p style={{ margin: 0, padding: '0.75rem 0.875rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Đang tải danh sách lớp...</p>
                   ) : !lopHocs.length ? (
-                    <p style={{ margin: 0, padding: '0.75rem 0.875rem', color: '#9ca3af', fontSize: '0.875rem' }}>Chưa có lớp học nào</p>
+                    <p style={{ margin: 0, padding: '0.75rem 0.875rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Chưa có lớp học nào</p>
                   ) : (
                     lopHocs.map((lop) => (
                       <label
                         key={lop._id}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 0.875rem', borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 0.875rem', borderBottom: '1px solid var(--border-default)', cursor: 'pointer' }}
                       >
                         <input
                           type="checkbox"
@@ -750,7 +750,7 @@ D) Phương án D
                           }
                           style={{ accentColor: '#2563eb', cursor: 'pointer', width: '15px', height: '15px' }}
                         />
-                        <span style={{ fontSize: '0.95rem', color: '#374151' }}>{lop.ten}</span>
+                        <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>{lop.ten}</span>
                       </label>
                     ))
                   )}
@@ -758,20 +758,20 @@ D) Phương án D
               </div>
             )}
             {editForm.doiTuongThi === 'GIAO_THEO_HOC_SINH' && (
-              <div style={{ marginTop: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', overflow: 'hidden' }}>
-                <div style={{ background: '#f9fafb', padding: '0.625rem 0.875rem', borderBottom: '1px solid #e5e7eb', fontSize: '0.9rem', fontWeight: 600, color: '#374151' }}>
+              <div style={{ marginTop: '0.75rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', overflow: 'hidden' }}>
+                <div style={{ background: 'var(--bg-surface-muted)', padding: '0.625rem 0.875rem', borderBottom: '1px solid var(--border-default)', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                   Danh sách học sinh
                 </div>
-                <div style={{ maxHeight: '220px', overflowY: 'auto', background: '#fff' }}>
+                <div style={{ maxHeight: '220px', overflowY: 'auto', background: 'var(--bg-surface)' }}>
                   {loadingSinhVien ? (
-                    <p style={{ margin: 0, padding: '0.75rem 0.875rem', color: '#6b7280', fontSize: '0.875rem' }}>Đang tải danh sách học sinh...</p>
+                    <p style={{ margin: 0, padding: '0.75rem 0.875rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Đang tải danh sách học sinh...</p>
                   ) : !sinhViens.length ? (
-                    <p style={{ margin: 0, padding: '0.75rem 0.875rem', color: '#9ca3af', fontSize: '0.875rem' }}>Chưa có học sinh nào</p>
+                    <p style={{ margin: 0, padding: '0.75rem 0.875rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Chưa có học sinh nào</p>
                   ) : (
                     sinhViens.map((sv) => (
                       <label
                         key={sv._id}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 0.875rem', borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 0.875rem', borderBottom: '1px solid var(--border-default)', cursor: 'pointer' }}
                       >
                         <input
                           type="checkbox"
@@ -786,7 +786,7 @@ D) Phương án D
                           }
                           style={{ accentColor: '#2563eb', cursor: 'pointer', width: '15px', height: '15px' }}
                         />
-                        <span style={{ fontSize: '0.95rem', color: '#374151' }}>
+                        <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>
                           {sv.ho} {sv.ten} ({sv.maNguoiDung || sv.email})
                         </span>
                       </label>
@@ -798,15 +798,15 @@ D) Phương án D
           </div>
 
           {/* Điểm và đáp án khi làm xong */}
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', overflow: 'hidden' }}>
-            <div style={{ background: '#f9fafb', padding: '0.625rem 1rem', borderBottom: '1px solid #e5e7eb' }}>
-              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151' }}>Điểm và đáp án khi làm xong</span>
+          <div style={{ border: '1px solid var(--border-default)', borderRadius: '0.5rem', overflow: 'hidden' }}>
+            <div style={{ background: 'var(--bg-surface-muted)', padding: '0.625rem 1rem', borderBottom: '1px solid var(--border-default)' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>Điểm và đáp án khi làm xong</span>
             </div>
             <div style={{ padding: '0.875rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
 
               {/* Cho xem điểm */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.875rem', color: '#374151', minWidth: '180px', paddingTop: '6px' }}>Cho xem điểm</span>
+                <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)', minWidth: '180px', paddingTop: '6px' }}>Cho xem điểm</span>
                 <RadioGroup
                   name="edit-cheDoXemDiem"
                   value={editForm.cheDoXemDiem}
@@ -821,7 +821,7 @@ D) Phương án D
 
               {/* Cho xem đề và đáp án */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.875rem', color: '#374151', minWidth: '180px', paddingTop: '6px' }}>Cho xem đề thi và đáp án</span>
+                <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)', minWidth: '180px', paddingTop: '6px' }}>Cho xem đề thi và đáp án</span>
                 <div>
                   <RadioGroup
                     name="edit-cheDoXemDapAn"
@@ -834,7 +834,7 @@ D) Phương án D
                     ]}
                   />
                   {/* Tùy chọn điểm tối thiểu */}
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', cursor: 'pointer', fontSize: '0.875rem', color: '#374151' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--text-primary)' }}>
                     <input
                       type="radio" name="edit-cheDoXemDapAn" value="DIEM_TOI_THIEU"
                       checked={editForm.cheDoXemDapAn === 'DIEM_TOI_THIEU'}
@@ -847,7 +847,7 @@ D) Phương án D
                         type="number" min={0} max={100}
                         value={editForm.diemToiThieuXemDapAn}
                         onChange={(e) => setEditForm((p) => ({ ...p, diemToiThieuXemDapAn: e.target.value }))}
-                        style={{ width: '80px', padding: '2px 6px', border: '1px solid #d1d5db', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                        style={{ width: '80px', padding: '2px 6px', border: '1px solid var(--border-default)', borderRadius: '0.375rem', fontSize: '0.875rem' }}
                         placeholder="Điểm..."
                       />
                     )}
@@ -878,7 +878,7 @@ D) Phương án D
               type="button"
               onClick={() => setDeleteTarget(null)}
               disabled={deleteMutation.isPending}
-              style={{ padding: '0.5rem 1rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', background: '#fff', cursor: 'pointer' }}
+              style={{ padding: '0.5rem 1rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', background: 'var(--bg-surface)', cursor: 'pointer' }}
             >
               Hủy
             </button>
@@ -900,12 +900,12 @@ D) Phương án D
               <p style={{ margin: '0 0 0.5rem', fontWeight: 500 }}>
                 Bạn có chắc muốn xóa đề thi này?
               </p>
-              <p style={{ margin: 0, fontSize: '0.875rem', color: '#374151', background: '#f3f4f6', padding: '6px 10px', borderRadius: '0.375rem', fontWeight: 600 }}>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-primary)', background: 'var(--bg-surface-muted)', padding: '6px 10px', borderRadius: '0.375rem', fontWeight: 600 }}>
                 "{deleteTarget?.ten}"
               </p>
             </div>
           </div>
-          <p style={{ margin: 0, fontSize: '0.8125rem', color: '#6b7280', background: '#fef9c3', padding: '8px 12px', borderRadius: '0.375rem' }}>
+          <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-secondary)', background: '#fef9c3', padding: '8px 12px', borderRadius: '0.375rem' }}>
             Đề thi sẽ được chuyển vào thùng rác và có thể khôi phục sau.
           </p>
           {deleteMutation.isError && (

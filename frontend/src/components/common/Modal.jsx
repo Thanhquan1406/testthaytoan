@@ -11,22 +11,23 @@ const styles = {
     zIndex: 1000, padding: '1rem',
   },
   modal: {
-    background: '#fff', borderRadius: '0.75rem', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+    background: 'var(--bg-surface)', color: 'var(--text-primary)',
+    borderRadius: '0.75rem', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
     width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column',
-    overflow: 'hidden',
+    overflow: 'hidden', border: '1px solid var(--border-default)',
   },
   header: {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '1.25rem 1.5rem', borderBottom: '1px solid #e5e7eb',
+    padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-default)',
   },
-  title: { fontSize: '1.125rem', fontWeight: 600, color: '#111827' },
+  title: { fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)' },
   closeBtn: {
     background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer',
-    color: '#6b7280', lineHeight: 1, padding: '4px',
+    color: 'var(--text-secondary)', lineHeight: 1, padding: '4px',
   },
   body: { padding: '1.5rem', overflowY: 'auto', flex: 1 },
   footer: {
-    padding: '1rem 1.5rem', borderTop: '1px solid #e5e7eb',
+    padding: '1rem 1.5rem', borderTop: '1px solid var(--border-default)',
     display: 'flex', gap: '0.75rem', justifyContent: 'flex-end',
   },
 };

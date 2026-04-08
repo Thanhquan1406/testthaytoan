@@ -8,13 +8,13 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const StatCard = ({ icon, label, value, color }) => (
   <div style={{
-    background: '#fff', borderRadius: '0.75rem', padding: '1.5rem',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: `3px solid ${color}20`,
+    background: 'var(--bg-surface)', borderRadius: '0.75rem', padding: '1.5rem',
+    boxShadow: 'var(--shadow)', border: `3px solid ${color}20`,
     display: 'flex', alignItems: 'center', gap: '1rem',
   }}>
     <div style={{ fontSize: '2.5rem', background: `${color}20`, borderRadius: '50%', width: 60, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</div>
     <div>
-      <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>{label}</div>
+      <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{label}</div>
       <div style={{ fontSize: '2rem', fontWeight: 700, color }}>{value?.toLocaleString() ?? '...'}</div>
     </div>
   </div>
@@ -28,7 +28,7 @@ const Dashboard = () => {
 
   return (
     <div>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', marginBottom: '1.5rem' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '1.5rem' }}>
         Dashboard Quản trị
       </h1>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>

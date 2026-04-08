@@ -24,6 +24,14 @@ const verifyAnonymousToken = (req, res, next) => {
   }
 };
 
+/** Ràng buộc token ẩn danh chỉ thao tác đúng phiên đã cấp */
+const ensureAnonymousSessionMatch = (req, res, next) => {
+  if (req.phienThi?.phienThiId?.toString() !== req.params.phienThiId?.toString()) {
+    return unauthorized(res, 'Token không hợp lệ cho phiên thi này');
+  }
+  return next();
+};
+
 /** GET /api/thi-an-danh/phien/:phienThiId/noi-dung */
 const getNoiDung = async (req, res, next) => {
   try {
@@ -86,4 +94,13 @@ const getChiTiet = async (req, res, next) => {
   }
 };
 
-module.exports = { verifyAnonymousToken, getNoiDung, luuTraLoi, nopBai, viPham, getKetQua, getChiTiet };
+module.exports = {
+  verifyAnonymousToken,
+  ensureAnonymousSessionMatch,
+  getNoiDung,
+  luuTraLoi,
+  nopBai,
+  viPham,
+  getKetQua,
+  getChiTiet,
+};

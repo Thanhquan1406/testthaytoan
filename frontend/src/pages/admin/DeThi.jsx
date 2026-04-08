@@ -5,8 +5,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getDanhSachDeThi, getThongKeDeThi, xoaHanDeThi } from '../../services/adminService';
-import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Pagination from '../../components/common/Pagination';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
+import { SkeletonCard, SkeletonTable } from '../../components/common/Skeleton';
+import { notify } from '../../utils/notify';
 
 const iconWrap = {
   width: 56,
@@ -45,10 +47,10 @@ const IcGiangVien = () => (
 const DeThiStatCard = ({ Icon, value, label, bg }) => (
   <div
     style={{
-      background: '#fff',
+      background: 'var(--bg-surface)',
       borderRadius: '0.75rem',
       padding: '1.25rem 1.35rem',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+      boxShadow: 'var(--shadow)',
       display: 'flex',
       alignItems: 'center',
       gap: '1rem',
@@ -60,16 +62,17 @@ const DeThiStatCard = ({ Icon, value, label, bg }) => (
       <Icon />
     </div>
     <div style={{ minWidth: 0 }}>
-      <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#111827', lineHeight: 1.15 }}>
+      <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.15 }}>
         {value?.toLocaleString?.('vi-VN') ?? '0'}
       </div>
-      <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '4px', fontWeight: 500 }}>{label}</div>
+      <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '4px', fontWeight: 500 }}>{label}</div>
     </div>
   </div>
 );
 
 const DeThi = () => {
   const [page, setPage] = useState(1);
+  const [deleteId, setDeleteId] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -101,11 +104,13 @@ const DeThi = () => {
 
   return (
     <div>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', marginBottom: '1.25rem' }}>Quản lý đề thi</h1>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '1.25rem' }}>Quản lý đề thi</h1>
 
       {statsLoading ? (
-        <div style={{ marginBottom: '1.5rem' }}>
-          <LoadingSpinner />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       ) : (
         <div
@@ -122,27 +127,27 @@ const DeThi = () => {
         </div>
       )}
 
-      {isLoading ? <LoadingSpinner /> : (
+      {isLoading ? <SkeletonTable rows={8} cols={4} /> : (
         <>
-          <div style={{ background: '#fff', borderRadius: '0.75rem', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '0.75rem', overflow: 'hidden', boxShadow: 'var(--shadow)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                <tr style={{ background: 'var(--bg-surface-muted)', borderBottom: '1px solid var(--border-default)' }}>
                   {['Tên đề thi', 'Môn học', 'Giáo viên tạo đề', 'Thao tác'].map(h => (
-                    <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>{h}</th>
+                    <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {data?.data?.map((d) => (
-                  <tr key={d._id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                  <tr key={d._id} style={{ borderBottom: '1px solid var(--border-default)' }}>
                     <td style={{ padding: '0.75rem 1rem', fontWeight: 500 }}>{d.ten}</td>
                     <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem' }}>{d.monHocId?.ten || '—'}</td>
                     <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem' }}>{getTenGiaoVien(d)}</td>
                     <td style={{ padding: '0.75rem 1rem' }}>
                       <button
                         type="button"
-                        onClick={() => confirm('Xóa vĩnh viễn đề thi này?') && deleteMutation.mutate(d._id)}
+                        onClick={() => setDeleteId(d._id)}
                         style={{ padding: '4px 10px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.8rem' }}
                       >Xóa hẳn</button>
                     </td>
@@ -156,6 +161,21 @@ const DeThi = () => {
           </div>
         </>
       )}
+      <ConfirmDialog
+        isOpen={!!deleteId}
+        title="Xóa vĩnh viễn đề thi"
+        message="Đề thi sẽ bị xóa vĩnh viễn khỏi hệ thống. Bạn chắc chắn muốn tiếp tục?"
+        confirmText="Xóa"
+        dangerous
+        onCancel={() => setDeleteId(null)}
+        onConfirm={() => {
+          deleteMutation.mutate(deleteId, {
+            onSuccess: () => notify.success('Đã xóa đề thi.'),
+            onError: (e) => notify.error(e.message || 'Xóa đề thi thất bại.'),
+          });
+          setDeleteId(null);
+        }}
+      />
     </div>
   );
 };

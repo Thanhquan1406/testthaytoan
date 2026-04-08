@@ -37,15 +37,15 @@ const CaptchaInput = forwardRef(({ register, errors, setValue, clearErrors }, re
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#374151' }}>
+      <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>
         Xác nhận bảo mật
       </label>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <div
           style={{
-            padding: '0.5rem 1rem', background: '#f3f4f6', border: '1px solid #d1d5db',
+            padding: '0.5rem 1rem', background: 'var(--bg-surface-muted)', border: '1px solid var(--border-default)',
             borderRadius: '0.5rem', fontWeight: 700, fontSize: '1.1rem', letterSpacing: '2px',
-            minWidth: '120px', textAlign: 'center', color: '#1e1b4b',
+            minWidth: '120px', textAlign: 'center', color: 'var(--text-primary)',
           }}
         >
           {loading ? '...' : question}
@@ -55,7 +55,7 @@ const CaptchaInput = forwardRef(({ register, errors, setValue, clearErrors }, re
           onClick={fetchCaptcha}
           title="Làm mới captcha"
           style={{
-            background: 'none', border: '1px solid #d1d5db', borderRadius: '0.5rem',
+            background: 'none', border: '1px solid var(--border-default)', borderRadius: '0.5rem',
             padding: '0.5rem', cursor: 'pointer', fontSize: '1rem',
           }}
         >

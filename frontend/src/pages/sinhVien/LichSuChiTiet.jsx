@@ -23,12 +23,12 @@ const LichSuChiTiet = () => {
     return (
       <div style={{ padding: '2rem' }}>
         <button onClick={() => navigate('/sinh-vien/lich-su')} style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', fontWeight: 500, marginBottom: '1rem' }}>← Lịch sử thi</button>
-        <div style={{ background: '#fff', borderRadius: '0.75rem', padding: '2.5rem', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <div style={{ background: 'var(--bg-surface)', borderRadius: '0.75rem', padding: '2.5rem', textAlign: 'center', boxShadow: 'var(--shadow)' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{is403 ? '🔒' : '❌'}</div>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1e1b4b', marginBottom: '0.5rem' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
             {is403 ? 'Chưa được phép xem đáp án' : 'Không thể xem bài'}
           </h2>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', maxWidth: '360px', margin: '0 auto' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', maxWidth: '360px', margin: '0 auto' }}>
             {is403
               ? 'Giáo viên đã cấu hình chưa cho phép xem đáp án bài thi này. Vui lòng quay lại sau hoặc liên hệ giáo viên.'
               : error.message}
@@ -45,9 +45,9 @@ const LichSuChiTiet = () => {
   return (
     <div>
       <button onClick={() => navigate('/sinh-vien/lich-su')} style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', fontWeight: 500, marginBottom: '1rem' }}>← Lịch sử thi</button>
-      <div style={{ background: '#fff', borderRadius: '0.75rem', padding: '1.25rem', marginBottom: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+      <div style={{ background: 'var(--bg-surface)', borderRadius: '0.75rem', padding: '1.25rem', marginBottom: '1.5rem', boxShadow: 'var(--shadow)' }}>
         <h1 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>{data?.deThiId?.ten}</h1>
-        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.875rem', color: '#6b7280' }}>
+        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
           <span>Điểm: <strong style={{ color: '#4f46e5', fontSize: '1.1rem' }}>{data?.ketQua?.tongDiem?.toFixed(2)}</strong></span>
           <span>Nộp: {data?.thoiGianNop ? new Date(data.thoiGianNop).toLocaleString('vi') : '—'}</span>
           <span>Vi phạm: {data?.viPhams?.length || 0}</span>

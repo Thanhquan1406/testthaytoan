@@ -15,3 +15,20 @@ export const capNhatGhiChu = (phienThiId, ghiChu) =>
   api.put(`${BASE}/${phienThiId}/ghi-chu`, { ghiChu }).then((r) => r.data);
 export const capNhatDiem = (phienThiId, tongDiem) =>
   api.put(`${BASE}/${phienThiId}/diem`, { tongDiem }).then((r) => r.data);
+
+export const getHistogram = (params) =>
+  api.get(`${BASE}/phan-tich/histogram`, { params }).then((r) => r.data);
+
+export const getQuestionDifficulty = (params) =>
+  api.get(`${BASE}/phan-tich/do-kho-cau-hoi`, { params }).then((r) => r.data);
+
+export const getClassComparison = (params) =>
+  api.get(`${BASE}/phan-tich/so-sanh-lop`, { params }).then((r) => r.data);
+
+export const exportKetQuaExcel = async (params) => {
+  return api.get(`${BASE}/export/excel`, { params, responseType: 'blob' });
+};
+
+export const exportKetQuaPDF = async (params) => {
+  return api.get(`${BASE}/export/pdf`, { params, responseType: 'blob' });
+};

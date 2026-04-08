@@ -8,14 +8,18 @@ require('dotenv').config();
 const http = require('http');
 const app = require('./app');
 const connectDB = require('./Config/db');
+const { initSocket } = require('./realtime/socketHandler');
+const { startAutoSubmitWorker } = require('./workers/autoSubmit.worker');
 
 const PORT = process.env.PORT || 5000;
 
 /** Khởi động server sau khi kết nối DB thành công */
 const startServer = async () => {
   await connectDB();
+  startAutoSubmitWorker();
 
   const server = http.createServer(app);
+  initSocket(server);
 
   server.listen(PORT, () => {
     console.log(`🚀 Server chạy tại http://localhost:${PORT}`);

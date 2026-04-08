@@ -34,7 +34,7 @@ const QuestionCard = ({ cauHoi, soThuTu, selectedAnswer, onAnswer, readonly = fa
     const isCorrect = readonly && dapAnDung && value === dapAnDung;
     const isWrong = readonly && isSelected && value !== dapAnDung;
 
-    let bg = '#fff', border = '#d1d5db', color = '#374151';
+    let bg = 'var(--bg-surface)', border = 'var(--border-default)', color = 'var(--text-primary)';
     if (isCorrect) { bg = '#d1fae5'; border = '#10b981'; color = '#065f46'; }
     else if (isWrong) { bg = '#fee2e2'; border = '#ef4444'; color = '#991b1b'; }
     else if (isSelected) { bg = '#eef2ff'; border = '#4f46e5'; color = '#3730a3'; }
@@ -49,7 +49,7 @@ const QuestionCard = ({ cauHoi, soThuTu, selectedAnswer, onAnswer, readonly = fa
 
   const LabelBadge = ({ label }) => (
     <span style={{
-      minWidth: '24px', height: '24px', borderRadius: '50%', background: '#e5e7eb',
+      minWidth: '24px', height: '24px', borderRadius: '50%', background: 'var(--bg-surface-muted)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontWeight: 700, fontSize: '0.8rem', flexShrink: 0,
     }}>{label}</span>
@@ -57,15 +57,16 @@ const QuestionCard = ({ cauHoi, soThuTu, selectedAnswer, onAnswer, readonly = fa
 
   return (
     <div style={{
-      background: '#fff', borderRadius: '0.75rem', padding: '1.5rem',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb',
+      background: 'var(--bg-surface)', borderRadius: '0.75rem', padding: '1.5rem',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid var(--border-default)',
+      color: 'var(--text-primary)',
     }}>
       {/* Tiêu đề câu hỏi */}
       <div style={{ marginBottom: '1rem' }}>
         <span style={{ color: '#4f46e5', fontWeight: 600, marginRight: '0.5rem' }}>
           Câu {soThuTu}:
         </span>
-        <span style={{ color: '#111827' }}><MathText>{noiDung}</MathText></span>
+        <span style={{ color: 'var(--text-primary)' }}><MathText>{noiDung}</MathText></span>
       </div>
 
       {/* Lựa chọn theo loại câu hỏi */}
@@ -100,7 +101,7 @@ const QuestionCard = ({ cauHoi, soThuTu, selectedAnswer, onAnswer, readonly = fa
           rows={4}
           placeholder="Nhập câu trả lời của bạn..."
           style={{
-            width: '100%', padding: '0.75rem', border: '1px solid #d1d5db',
+            width: '100%', padding: '0.75rem', border: '1px solid var(--border-default)',
             borderRadius: '0.5rem', fontSize: '0.9rem', resize: 'vertical',
             fontFamily: 'inherit', outline: 'none',
           }}

@@ -33,15 +33,15 @@ const PhongThiChiTiet = () => {
     <div>
       <button onClick={() => navigate('/sinh-vien/phong-thi')} style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', fontWeight: 500, marginBottom: '1rem' }}>← Phòng thi</button>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>{lop?.ten}</h1>
-      <p style={{ color: '#6b7280', marginBottom: '1.5rem', fontSize: '0.875rem' }}>GV: {lop?.giaoVienId?.ho} {lop?.giaoVienId?.ten}</p>
+      <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>GV: {lop?.giaoVienId?.ho} {lop?.giaoVienId?.ten}</p>
 
       {loadDe ? <LoadingSpinner size="sm" /> : (
         <div style={{ display: 'grid', gap: '0.75rem' }}>
           {deThi?.map((d) => (
-            <div key={d._id} style={{ background: '#fff', padding: '1.25rem', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div key={d._id} style={{ background: 'var(--bg-surface)', padding: '1.25rem', borderRadius: '0.75rem', boxShadow: 'var(--shadow)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h3 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{d.ten}</h3>
-                <p style={{ fontSize: '0.8rem', color: '#6b7280' }}>{d.monHocId?.ten} • {d.thoiGianPhut} phút • {d.cauHois?.length || '?'} câu</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{d.monHocId?.ten} • {d.thoiGianPhut} phút • {d.cauHois?.length || '?'} câu</p>
                 {d.thoiGianDong && (
                   <p style={{ fontSize: '0.75rem', color: new Date(d.thoiGianDong) < new Date() ? '#dc2626' : '#d97706', marginTop: '2px' }}>
                     Hết hạn: {new Date(d.thoiGianDong).toLocaleString('vi')}
@@ -66,7 +66,7 @@ const PhongThiChiTiet = () => {
               </button>
             </div>
           ))}
-          {!deThi?.length && <p style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem', background: '#fff', borderRadius: '0.75rem' }}>Chưa có đề thi nào được xuất bản trong lớp này</p>}
+          {!deThi?.length && <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem', background: 'var(--bg-surface)', borderRadius: '0.75rem' }}>Chưa có đề thi nào được xuất bản trong lớp này</p>}
         </div>
       )}
     </div>

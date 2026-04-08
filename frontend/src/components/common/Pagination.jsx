@@ -16,9 +16,9 @@ const Pagination = ({ meta, onPageChange }) => {
   const btnStyle = (disabled, active) => ({
     padding: '0.375rem 0.75rem', border: '1px solid', borderRadius: '0.375rem',
     cursor: disabled ? 'not-allowed' : 'pointer', fontWeight: active ? 600 : 400,
-    background: active ? '#4f46e5' : '#fff',
-    borderColor: active ? '#4f46e5' : '#d1d5db',
-    color: active ? '#fff' : disabled ? '#9ca3af' : '#374151',
+    background: active ? '#4f46e5' : 'var(--bg-surface)',
+    borderColor: active ? '#4f46e5' : 'var(--border-default)',
+    color: active ? '#fff' : disabled ? 'var(--text-secondary)' : 'var(--text-primary)',
     opacity: disabled ? 0.6 : 1,
     fontSize: '0.875rem',
   });

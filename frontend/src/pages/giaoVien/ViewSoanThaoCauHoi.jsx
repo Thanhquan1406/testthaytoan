@@ -5,6 +5,7 @@ import { layCauTruc, luuCauHoi, layDanhSachMonHoc, layDanhSachNganHang } from '.
 import { taoDeThiTuMaTran, parseFile } from '../../services/deThiService';
 import { getDanhSach as getDanhSachLopHoc, getById as getLopHocById } from '../../services/lopHocService';
 import MathText from '../../components/common/MathText';
+import { notify } from '../../utils/notify';
 
 const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, generatedQuestions, isDeThiDirect, onClose }) => {
     const { user } = useAuthContext();
@@ -179,7 +180,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
         if (target) {
             target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else {
-            alert(`Không tìm thấy Câu ${goToQuestion}`);
+            notify.warning(`Không tìm thấy Câu ${goToQuestion}`);
         }
     };
 
@@ -224,7 +225,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
         if (!file) return;
 
         if (!nganHangId && !isDeThiDirect) {
-            alert('Không thể upload vì không xác định được Ngân hàng hiện tại!');
+            notify.error('Không thể upload vì không xác định được Ngân hàng hiện tại!');
             e.target.value = null;
             return;
         }
@@ -611,11 +612,11 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
                             disabled={isSaving}
                             onClick={async () => {
                                 if (!deThiConfig.ten.trim()) {
-                                    alert("Tên đề thi không được để trống!");
+                                    notify.warning('Tên đề thi không được để trống!');
                                     return;
                                 }
                                 if (!deThiConfig.monHocId) {
-                                    alert("Vui lòng chọn môn học!");
+                                    notify.warning('Vui lòng chọn môn học!');
                                     return;
                                 }
 
@@ -669,7 +670,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
                                     const rolePrefix = user?.vaiTro === 'ADMIN' ? 'admin' : 'giao-vien';
                                     navigate(`/${rolePrefix}/de-thi`);
                                 } catch (error) {
-                                    alert('Lỗi tạo đề thi: ' + (error.response?.data?.message || error.message));
+                                    notify.error('Lỗi tạo đề thi: ' + (error.response?.data?.message || error.message));
                                     setIsSaving(false);
                                 }
                             }}
@@ -771,7 +772,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
                                         setIsSaving(true);
                                         await luuCauHoi(nganHangId, questionsToSave);
                                         setToastMessage(null);
-                                        alert(`Đã lưu ${questionsToSave.length} câu hỏi vào ngân hàng thành công!`);
+                                        notify.success(`Đã lưu ${questionsToSave.length} câu hỏi vào ngân hàng thành công!`);
                                         onClose();
                                     } catch (err) {
                                         setToastMessage(err?.response?.data?.message || 'Lưu thất bại, vui lòng thử lại');

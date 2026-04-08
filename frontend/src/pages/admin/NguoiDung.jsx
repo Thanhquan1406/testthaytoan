@@ -8,6 +8,9 @@ import { getDanhSachNguoiDung, getNguoiDung, updateNguoiDung, xoaNguoiDung } fro
 import Modal from '../../components/common/Modal';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Pagination from '../../components/common/Pagination';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
+import { SkeletonTable } from '../../components/common/Skeleton';
+import { notify } from '../../utils/notify';
 
 const VAI_TRO_COLORS = { ADMIN: '#dc2626', GIAO_VIEN: '#059669', SINH_VIEN: '#4f46e5' };
 const VAI_TRO_LABEL = { ADMIN: 'Admin', GIAO_VIEN: 'Giáo viên', SINH_VIEN: 'Sinh viên' };
@@ -22,6 +25,7 @@ const NguoiDung = () => {
   const [form, setForm] = useState(emptyForm);
   const [detailLoading, setDetailLoading] = useState(false);
   const [formError, setFormError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -91,10 +95,14 @@ const NguoiDung = () => {
     });
   };
 
-  const handleDelete = (id, ten) => {
-    if (confirm(`Xóa người dùng "${ten}"? Hành động này không thể hoàn tác.`)) {
-      deleteMutation.mutate(id);
-    }
+  const handleDelete = (id, ten) => setDeleteTarget({ id, ten });
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    deleteMutation.mutate(deleteTarget.id, {
+      onSuccess: () => notify.success('Đã xóa người dùng.'),
+      onError: (e) => notify.error(e.message || 'Xóa người dùng thất bại.'),
+    });
+    setDeleteTarget(null);
   };
 
   const formValid =
@@ -109,29 +117,29 @@ const NguoiDung = () => {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>Quản lý người dùng</h1>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>Quản lý người dùng</h1>
         <input
           type="text" placeholder="Tìm kiếm..." value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          style={{ padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', width: '250px' }}
+          style={{ padding: '0.5rem 0.75rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', width: '250px' }}
         />
       </div>
 
-      {isLoading ? <LoadingSpinner /> : (
+      {isLoading ? <SkeletonTable rows={8} cols={6} /> : (
         <>
-          <div style={{ background: '#fff', borderRadius: '0.75rem', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '0.75rem', overflow: 'hidden', boxShadow: 'var(--shadow)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                <tr style={{ background: 'var(--bg-surface-muted)', borderBottom: '1px solid var(--border-default)' }}>
                   {['Mã', 'Họ và tên', 'Email', 'SĐT', 'Vai trò', 'Thao tác'].map((h) => (
-                    <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>{h}</th>
+                    <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {data?.data?.map((u) => (
-                  <tr key={u._id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                    <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#6b7280' }}>{u.maNguoiDung}</td>
+                  <tr key={u._id} style={{ borderBottom: '1px solid var(--border-default)' }}>
+                    <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{u.maNguoiDung}</td>
                     <td style={{ padding: '0.75rem 1rem', fontWeight: 500 }}>{getHoTen(u)}</td>
                     <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem' }}>{u.email}</td>
                     <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem' }}>{u.soDienThoai}</td>
@@ -159,8 +167,8 @@ const NguoiDung = () => {
                         onClick={() => handleDelete(u._id, getHoTen(u))}
                         disabled={u.vaiTro === 'ADMIN'}
                         style={{
-                          padding: '4px 10px', background: u.vaiTro === 'ADMIN' ? '#f3f4f6' : '#fee2e2',
-                          border: 'none', borderRadius: '0.375rem', color: u.vaiTro === 'ADMIN' ? '#9ca3af' : '#dc2626',
+                          padding: '4px 10px', background: u.vaiTro === 'ADMIN' ? 'var(--bg-surface-muted)' : '#fee2e2',
+                          border: 'none', borderRadius: '0.375rem', color: u.vaiTro === 'ADMIN' ? 'var(--text-secondary)' : '#dc2626',
                           cursor: u.vaiTro === 'ADMIN' ? 'not-allowed' : 'pointer', fontSize: '0.8rem',
                         }}
                       >
@@ -177,6 +185,15 @@ const NguoiDung = () => {
           </div>
         </>
       )}
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Xác nhận xóa người dùng"
+        message={deleteTarget ? `Xóa người dùng "${deleteTarget.ten}"? Hành động này không thể hoàn tác.` : ''}
+        confirmText="Xóa"
+        dangerous
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+      />
 
       <Modal
         isOpen={modalOpen}
@@ -187,7 +204,7 @@ const NguoiDung = () => {
             <button
               type="button"
               onClick={closeModal}
-              style={{ padding: '0.5rem 1rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', background: '#fff', cursor: 'pointer' }}
+              style={{ padding: '0.5rem 1rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', background: 'var(--bg-surface)', cursor: 'pointer' }}
             >
               Hủy
             </button>
@@ -219,7 +236,7 @@ const NguoiDung = () => {
                 type="text"
                 value={form.ho}
                 onChange={(e) => setForm((p) => ({ ...p, ho: e.target.value }))}
-                style={{ width: '100%', marginTop: '4px', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', boxSizing: 'border-box' }}
+                style={{ width: '100%', marginTop: '4px', padding: '0.5rem 0.75rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', boxSizing: 'border-box' }}
               />
             </div>
             <div>
@@ -228,7 +245,7 @@ const NguoiDung = () => {
                 type="text"
                 value={form.ten}
                 onChange={(e) => setForm((p) => ({ ...p, ten: e.target.value }))}
-                style={{ width: '100%', marginTop: '4px', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', boxSizing: 'border-box' }}
+                style={{ width: '100%', marginTop: '4px', padding: '0.5rem 0.75rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', boxSizing: 'border-box' }}
               />
             </div>
             <div>
@@ -237,7 +254,7 @@ const NguoiDung = () => {
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                style={{ width: '100%', marginTop: '4px', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', boxSizing: 'border-box' }}
+                style={{ width: '100%', marginTop: '4px', padding: '0.5rem 0.75rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', boxSizing: 'border-box' }}
               />
             </div>
             <div>
@@ -247,7 +264,7 @@ const NguoiDung = () => {
                 inputMode="numeric"
                 value={form.soDienThoai}
                 onChange={(e) => setForm((p) => ({ ...p, soDienThoai: e.target.value }))}
-                style={{ width: '100%', marginTop: '4px', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', boxSizing: 'border-box' }}
+                style={{ width: '100%', marginTop: '4px', padding: '0.5rem 0.75rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', boxSizing: 'border-box' }}
               />
             </div>
           </div>

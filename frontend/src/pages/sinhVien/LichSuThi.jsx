@@ -35,10 +35,10 @@ const LichSuThi = () => {
               const anDiem = p.anDiem;
               const choPhepXemDapAn = p.choPhepXemDapAn !== false;
               return (
-                <div key={p._id} style={{ background: '#fff', padding: '1.25rem', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div key={p._id} style={{ background: 'var(--bg-surface)', padding: '1.25rem', borderRadius: '0.75rem', boxShadow: 'var(--shadow)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <h3 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{p.deThiId?.ten || 'Đề thi'}</h3>
-                    <p style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                       Nộp lúc: {new Date(p.thoiGianNop).toLocaleString('vi')} • {p.deThiId?.thoiGianPhut} phút
                     </p>
                   </div>
@@ -70,7 +70,7 @@ const LichSuThi = () => {
           </div>
         </>
       ) : (
-        <div style={{ background: '#fff', padding: '3rem', borderRadius: '0.75rem', textAlign: 'center', color: '#9ca3af', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <div style={{ background: 'var(--bg-surface)', padding: '3rem', borderRadius: '0.75rem', textAlign: 'center', color: 'var(--text-secondary)', boxShadow: 'var(--shadow)' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📋</div>
           <p>Bạn chưa thi lần nào. Vào phòng thi để bắt đầu!</p>
         </div>

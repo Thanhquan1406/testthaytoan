@@ -6,8 +6,10 @@
 
 const DeThi = require('../models/DeThi');
 const PhienThi = require('../models/PhienThi');
+const NguoiDung = require('../models/NguoiDung');
 const lopHocService = require('./lopHoc.service');
 const { taoTokenThiAnDanh } = require('./jwt.service');
+const socketEmitter = require('../realtime/socketEmitter');
 const {
   TRANG_THAI_PHIEN_THI,
   TRANG_THAI_TRA_LOI,
@@ -42,6 +44,23 @@ const batDauThiQuaLop = async (sinhVienId, deThiId, lopHocId) => {
   await _kiemTraGioiHanLuotThi(sinhVienId, deThi);
 
   const phienThi = await _taoPhienThi({ deThiId, nguoiDungId: sinhVienId, lopHocId, deThi });
+
+  // Phát event realtime cho giáo viên đang theo dõi
+  try {
+    const sv = await NguoiDung.findById(sinhVienId).select('ho ten maNguoiDung').lean();
+    socketEmitter.emitStudentJoined(deThiId, {
+      phienThiId: phienThi._id,
+      deThiId,
+      nguoiDung: sv ? { _id: sv._id, ho: sv.ho, ten: sv.ten, maNguoiDung: sv.maNguoiDung } : null,
+      hoTenAnDanh: null,
+      trangThai: phienThi.trangThai,
+      thoiGianBatDau: phienThi.thoiGianBatDau,
+      tongSoCau: phienThi.cauTraLois.length,
+      eventId: `${phienThi._id}-joined-${Date.now()}`,
+      serverTime: new Date(),
+    });
+  } catch { /* không để socket failure ảnh hưởng đến thi */ }
+
   return { phienThiId: phienThi._id };
 };
 
@@ -71,6 +90,21 @@ const batDauThiAnDanh = async (maTruyCap, hoTenAnDanh) => {
 
   // Tạo token JWT riêng cho phiên ẩn danh
   const token = taoTokenThiAnDanh({ phienThiId: phienThi._id, hoTenAnDanh });
+
+  try {
+    socketEmitter.emitStudentJoined(deThi._id, {
+      phienThiId: phienThi._id,
+      deThiId: deThi._id,
+      nguoiDung: null,
+      hoTenAnDanh: hoTenAnDanh || 'Ẩn danh',
+      trangThai: phienThi.trangThai,
+      thoiGianBatDau: phienThi.thoiGianBatDau,
+      tongSoCau: phienThi.cauTraLois.length,
+      eventId: `${phienThi._id}-joined-${Date.now()}`,
+      serverTime: new Date(),
+    });
+  } catch { /* không để socket failure ảnh hưởng đến thi */ }
+
   return { phienThiId: phienThi._id, token };
 };
 
@@ -133,6 +167,11 @@ const luuTraLoi = async (phienThiId, nguoiDungId, cauHoiId, noiDungTraLoi) => {
     throw Object.assign(new Error('Bài thi đã được nộp'), { statusCode: 400 });
   }
 
+  const deThi = await DeThi.findById(phienThi.deThiId).select('thoiGianPhut').lean();
+  if (_laPhienDaHetGio(phienThi, deThi)) {
+    throw Object.assign(new Error('Đã hết thời gian làm bài'), { statusCode: 400 });
+  }
+
   // Cập nhật hoặc thêm câu trả lời
   const index = phienThi.cauTraLois.findIndex((c) => c.cauHoiId.toString() === cauHoiId);
   if (index >= 0) {
@@ -143,6 +182,21 @@ const luuTraLoi = async (phienThiId, nguoiDungId, cauHoiId, noiDungTraLoi) => {
 
   phienThi.trangThai = TRANG_THAI_PHIEN_THI.DANG_THI;
   await phienThi.save();
+
+  try {
+    const soCauDaTraLoi = phienThi.cauTraLois.filter((c) => c.noiDungTraLoi).length;
+    const tongSoCau = phienThi.cauTraLois.length;
+    socketEmitter.emitProgressUpdated(phienThi.deThiId, {
+      phienThiId: phienThi._id,
+      deThiId: phienThi.deThiId,
+      sinhVienId: phienThi.nguoiDungId,
+      soCauDaTraLoi,
+      tongSoCau,
+      percent: tongSoCau > 0 ? Math.round((soCauDaTraLoi / tongSoCau) * 100) : 0,
+      eventId: `${phienThi._id}-progress-${Date.now()}`,
+      serverTime: new Date(),
+    });
+  } catch { /* ignore */ }
 };
 
 // ─── NỘP BÀI & CHẤM ĐIỂM ─────────────────────────────────────────────────────
@@ -153,11 +207,32 @@ const luuTraLoi = async (phienThiId, nguoiDungId, cauHoiId, noiDungTraLoi) => {
  * @param {string} nguoiDungId
  * @returns {Promise<object>} Kết quả thi
  */
-const nopBai = async (phienThiId, nguoiDungId) => {
+const nopBai = async (phienThiId, nguoiDungId, options = {}) => {
+  const { allowAlreadySubmitted = false } = options;
   const phienThi = await _timPhienThiVaKiemTraQuyen(phienThiId, nguoiDungId);
 
   if (phienThi.trangThai === TRANG_THAI_PHIEN_THI.DA_NOP_BAI) {
-    throw Object.assign(new Error('Bài thi đã được nộp trước đó'), { statusCode: 400 });
+    if (!allowAlreadySubmitted) {
+      throw Object.assign(new Error('Bài thi đã được nộp trước đó'), { statusCode: 400 });
+    }
+
+    const deThiDaNop = await DeThi.findById(phienThi.deThiId)
+      .select('cauHois cheDoXemDiem cheDoXemDapAn diemToiThieuXemDapAn')
+      .lean();
+    const tongDiemDaNop = phienThi.ketQua?.tongDiem ?? 0;
+    const xemDiemDaNop = await _duocXemDiem(deThiDaNop);
+    const xemDapAnDaNop = await _duocXemDapAn(deThiDaNop, tongDiemDaNop);
+
+    return {
+      tongDiem: xemDiemDaNop ? tongDiemDaNop : null,
+      soCauDung: xemDiemDaNop ? phienThi.cauTraLois.filter((c) => c.trangThaiTraLoi === TRANG_THAI_TRA_LOI.DUNG).length : null,
+      tongSoCau: deThiDaNop?.cauHois?.length || phienThi.cauTraLois.length,
+      thoiGianNop: phienThi.thoiGianNop,
+      anDiem: !xemDiemDaNop,
+      choPhepXemDapAn: xemDapAnDaNop,
+      cheDoXemDiem: deThiDaNop?.cheDoXemDiem || 'THI_XONG',
+      cheDoXemDapAn: deThiDaNop?.cheDoXemDapAn || 'THI_XONG',
+    };
   }
 
   const deThi = await DeThi.findById(phienThi.deThiId)
@@ -172,6 +247,18 @@ const nopBai = async (phienThiId, nguoiDungId) => {
   phienThi.thoiGianNop = new Date();
   phienThi.ketQua = { tongDiem, trangThaiCham: 'DA_CHAM', ghiChu: '' };
   await phienThi.save();
+
+  try {
+    socketEmitter.emitSessionSubmitted(phienThi.deThiId, {
+      phienThiId: phienThi._id,
+      deThiId: phienThi.deThiId,
+      sinhVienId: phienThi.nguoiDungId,
+      trangThai: TRANG_THAI_PHIEN_THI.DA_NOP_BAI,
+      thoiGianNop: phienThi.thoiGianNop,
+      eventId: `${phienThi._id}-submit-${Date.now()}`,
+      serverTime: new Date(),
+    });
+  } catch { /* ignore */ }
 
   const xemDiem = await _duocXemDiem(deThi);
   const xemDapAn = await _duocXemDapAn(deThi, tongDiem);
@@ -204,6 +291,20 @@ const xuLyViPham = async (phienThiId, nguoiDungId, hanhVi) => {
 
   phienThi.viPhams.push({ hanhVi, soLanViPham: 1, thoiGianViPham: new Date() });
   await phienThi.save();
+
+  try {
+    const viPhamMoi = phienThi.viPhams.at(-1);
+    socketEmitter.emitViolationReported(phienThi.deThiId, {
+      phienThiId: phienThi._id,
+      deThiId: phienThi.deThiId,
+      sinhVienId: phienThi.nguoiDungId,
+      hanhVi,
+      soViPhamTongCong: phienThi.viPhams.length,
+      thoiGian: viPhamMoi?.thoiGianViPham,
+      eventId: `${phienThi._id}-vipham-${Date.now()}`,
+      serverTime: new Date(),
+    });
+  } catch { /* ignore */ }
 
   return phienThi.viPhams.length;
 };
@@ -429,6 +530,16 @@ const _kiemTraGioiHanLuotThi = async (sinhVienId, deThi) => {
       { statusCode: 400, phienThiId: dangThi._id }
     );
   }
+};
+
+/** Trả true nếu phiên thi đã quá thời gian làm bài */
+const _laPhienDaHetGio = (phienThi, deThi) => {
+  if (!phienThi?.thoiGianBatDau) return false;
+  const thoiGianPhut = deThi?.thoiGianPhut;
+  if (!thoiGianPhut || thoiGianPhut <= 0) return false; // 0/null: không giới hạn
+
+  const deadline = new Date(phienThi.thoiGianBatDau).getTime() + thoiGianPhut * 60 * 1000;
+  return Date.now() >= deadline;
 };
 
 /** Tạo phiên thi mới */

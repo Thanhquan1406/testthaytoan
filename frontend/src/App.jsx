@@ -3,7 +3,8 @@
  * Layout: Navbar + Sidebar + Main content cho các trang cần auth.
  */
 
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from './components/common/Navbar';
 import Sidebar from './components/common/Sidebar';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -92,12 +93,14 @@ const SV_NAV = [
  * @param {{ navItems: object[], sidebarTitle?: string }} props
  */
 const DashboardLayout = ({ navItems, sidebarTitle }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+  <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg-page)', color: 'var(--text-primary)' }}>
     <Navbar />
     <div style={{ display: 'flex', flex: 1 }}>
       <Sidebar items={navItems} title={sidebarTitle} />
       <main style={{ flex: 1, padding: '2rem', overflowY: 'auto', maxHeight: 'calc(100vh - 64px)' }}>
-        <Outlet />
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+          <Outlet />
+        </motion.div>
       </main>
     </div>
   </div>
@@ -116,14 +119,13 @@ const SharedDashboardLayout = () => {
   return <DashboardLayout navItems={navItems} sidebarTitle={sidebarTitle} />;
 };
 
-// ─── APP ─────────────────────────────────────────────────────────────────────
-
-const App = () => (
-  <BrowserRouter>
-    <Routes>
+const AppRoutes = () => {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
       {/* Trang chủ - redirect theo role */}
       <Route path="/" element={<Navigate to="/login" replace />} />
-
       {/* Auth */}
       <Route path="/login" element={<Login />} />
       <Route path="/login/admin" element={<LoginAdmin />} />
@@ -198,11 +200,20 @@ const App = () => (
       <Route path="*" element={
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '1rem' }}>
           <div style={{ fontSize: '5rem' }}>🔍</div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#1e1b4b' }}>404 - Không tìm thấy trang</h1>
+          <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>404 - Không tìm thấy trang</h1>
           <a href="/login" style={{ color: '#4f46e5', fontSize: '1rem' }}>Về trang đăng nhập</a>
         </div>
       } />
-    </Routes>
+      </Routes>
+    </AnimatePresence>
+  );
+};
+
+// ─── APP ─────────────────────────────────────────────────────────────────────
+
+const App = () => (
+  <BrowserRouter>
+    <AppRoutes />
   </BrowserRouter>
 );
 

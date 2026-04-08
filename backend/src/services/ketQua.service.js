@@ -123,6 +123,150 @@ const layDanhSachLop = async (giaoVienId) => {
   return LopHoc.find({ giaoVienId }).select('ten').lean();
 };
 
+const _ensureTeacherOwnsExam = async (giaoVienId, deThiId) => {
+  if (!deThiId) throw Object.assign(new Error('Cần cung cấp deThiId'), { statusCode: 400 });
+  const deThi = await DeThi.findOne({ _id: deThiId, nguoiDungId: giaoVienId })
+    .populate('cauHois.cauHoiId', 'noiDung loaiCauHoi')
+    .lean();
+  if (!deThi) throw Object.assign(new Error('Không tìm thấy đề thi'), { statusCode: 404 });
+  return deThi;
+};
+
+const _buildFilter = ({ deThiId, lopHocId }) => {
+  const filter = {
+    deThiId,
+    trangThai: TRANG_THAI_PHIEN_THI.DA_NOP_BAI,
+  };
+  if (lopHocId) filter.lopHocId = lopHocId;
+  return filter;
+};
+
+const _fetchSubmittedSessions = async ({ deThiId, lopHocId }) => {
+  return PhienThi.find(_buildFilter({ deThiId, lopHocId }))
+    .populate('lopHocId', 'ten')
+    .select('lopHocId ketQua cauTraLois')
+    .lean();
+};
+
+const _toDifficulty = (tiLeDung) => {
+  if (tiLeDung >= 0.8) return 'DE';
+  if (tiLeDung >= 0.5) return 'TRUNG_BINH';
+  return 'KHO';
+};
+
+const getHistogram = async (giaoVienId, { deThiId, lopHocId, binSize }) => {
+  await _ensureTeacherOwnsExam(giaoVienId, deThiId);
+  const sessions = await _fetchSubmittedSessions({ deThiId, lopHocId });
+
+  const size = Number(binSize) > 0 ? Number(binSize) : 1;
+  const maxScore = 10;
+  const bins = [];
+  for (let start = 0; start < maxScore; start += size) {
+    const end = Math.min(start + size, maxScore);
+    bins.push({
+      label: `${start.toFixed(1)}-${end.toFixed(1)}`,
+      min: start,
+      max: end,
+      count: 0,
+    });
+  }
+
+  sessions.forEach((s) => {
+    const score = Number(s?.ketQua?.tongDiem);
+    if (!Number.isFinite(score)) return;
+    const safeScore = Math.max(0, Math.min(maxScore, score));
+    let idx = Math.floor(safeScore / size);
+    if (idx >= bins.length) idx = bins.length - 1;
+    bins[idx].count += 1;
+  });
+
+  return { total: sessions.length, binSize: size, bins };
+};
+
+const getQuestionDifficulty = async (giaoVienId, { deThiId, lopHocId }) => {
+  const deThi = await _ensureTeacherOwnsExam(giaoVienId, deThiId);
+  const sessions = await _fetchSubmittedSessions({ deThiId, lopHocId });
+
+  const questionMap = {};
+  deThi.cauHois.forEach((c, idx) => {
+    const id = c.cauHoiId?._id?.toString();
+    if (!id) return;
+    questionMap[id] = {
+      cauHoiId: id,
+      thuTu: idx + 1,
+      noiDung: c.cauHoiId.noiDung || '',
+      loaiCauHoi: c.cauHoiId.loaiCauHoi || null,
+      soDung: 0,
+      tongBaiLam: 0,
+      tiLeDung: 0,
+      mucDo: 'TRUNG_BINH',
+    };
+  });
+
+  sessions.forEach((s) => {
+    (s.cauTraLois || []).forEach((tl) => {
+      const qid = tl.cauHoiId?.toString();
+      if (!qid || !questionMap[qid]) return;
+      questionMap[qid].tongBaiLam += 1;
+      if (tl.trangThaiTraLoi === 'DUNG') questionMap[qid].soDung += 1;
+    });
+  });
+
+  const data = Object.values(questionMap).map((q) => {
+    const tiLeDung = q.tongBaiLam > 0 ? q.soDung / q.tongBaiLam : 0;
+    return {
+      ...q,
+      tiLeDung: Number((tiLeDung * 100).toFixed(2)),
+      mucDo: _toDifficulty(tiLeDung),
+    };
+  });
+
+  return { totalQuestions: data.length, totalSubmissions: sessions.length, data };
+};
+
+const getClassComparison = async (giaoVienId, { deThiId }) => {
+  await _ensureTeacherOwnsExam(giaoVienId, deThiId);
+  const sessions = await _fetchSubmittedSessions({ deThiId, lopHocId: '' });
+  const map = {};
+
+  sessions.forEach((s) => {
+    const key = s.lopHocId?._id?.toString() || 'AN_DANH';
+    if (!map[key]) {
+      map[key] = {
+        lopHocId: key === 'AN_DANH' ? null : key,
+        tenLop: s.lopHocId?.ten || 'Ẩn danh / Không lớp',
+        scores: [],
+      };
+    }
+    const score = Number(s?.ketQua?.tongDiem);
+    if (Number.isFinite(score)) map[key].scores.push(score);
+  });
+
+  const data = Object.values(map).map((item) => {
+    const scores = item.scores;
+    const count = scores.length;
+    const avg = count ? scores.reduce((a, b) => a + b, 0) / count : 0;
+    const max = count ? Math.max(...scores) : 0;
+    const min = count ? Math.min(...scores) : 0;
+    const passCount = scores.filter((s) => s >= 5).length;
+    return {
+      lopHocId: item.lopHocId,
+      tenLop: item.tenLop,
+      count,
+      avg: Number(avg.toFixed(2)),
+      max: Number(max.toFixed(2)),
+      min: Number(min.toFixed(2)),
+      passRate: count ? Number(((passCount / count) * 100).toFixed(2)) : 0,
+    };
+  });
+
+  return {
+    totalClasses: data.length,
+    totalSubmissions: sessions.length,
+    data: data.sort((a, b) => b.avg - a.avg),
+  };
+};
+
 module.exports = {
   layKetQuaTheoDeVaLop,
   capNhatGhiChu,
@@ -130,4 +274,7 @@ module.exports = {
   xemChiTietBaiLam,
   layDanhSachDeThi,
   layDanhSachLop,
+  getHistogram,
+  getQuestionDifficulty,
+  getClassComparison,
 };

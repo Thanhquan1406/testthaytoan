@@ -146,7 +146,7 @@ const NganHangCauHoiList = () => {
                 key={bank._id} 
                 onClick={() => navigate('/ngan-hang/view-ngan-hang', { state: { selectedBank: { ...bank, id: bank._id } } })}
                 style={{
-                  background: '#ffffff',
+                  background: 'var(--bg-surface)',
                   border: '1px solid #f3f4f6',
                   borderRadius: '0.5rem',
                   padding: '1.25rem',
@@ -164,10 +164,10 @@ const NganHangCauHoiList = () => {
                 }}
               >
                 <div style={{ marginBottom: '2.5rem' }}>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#111827', margin: 0, marginBottom: '0.5rem' }}>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0, marginBottom: '0.5rem' }}>
                     {bank.ten}
                   </h3>
-                  <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                     {bank.soCauHoi} câu hỏi
                   </div>
                 </div>
@@ -179,7 +179,7 @@ const NganHangCauHoiList = () => {
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       width: '30px', height: '30px', borderRadius: '0.25rem', cursor: 'pointer',
-                      background: '#ffffff', border: '1px solid #bfdbfe', color: '#3b82f6',
+                      background: 'var(--bg-surface)', border: '1px solid #bfdbfe', color: '#3b82f6',
                       transition: 'all 0.2s'
                     }}
                     onMouseOver={(e) => {e.currentTarget.style.background = '#eff6ff'}}
@@ -197,7 +197,7 @@ const NganHangCauHoiList = () => {
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       width: '30px', height: '30px', borderRadius: '0.25rem', cursor: 'pointer',
-                      background: '#ffffff', border: '1px solid #fecaca', color: '#ef4444',
+                      background: 'var(--bg-surface)', border: '1px solid #fecaca', color: '#ef4444',
                       transition: 'all 0.2s'
                     }}
                     onMouseOver={(e) => {e.currentTarget.style.background = '#fef2f2'}}
@@ -213,7 +213,7 @@ const NganHangCauHoiList = () => {
             ))}
           </div>
           
-          <div style={{ textAlign: 'right', marginTop: '1.5rem', color: '#6b7280', fontSize: '0.85rem' }}>
+          <div style={{ textAlign: 'right', marginTop: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
             {displayBanks.length} File
           </div>
         </div>
@@ -227,13 +227,13 @@ const NganHangCauHoiList = () => {
           display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center'
         }}>
           <div style={{
-            background: '#ffffff', width: '100%', maxWidth: '500px', 
+            background: 'var(--bg-surface)', width: '100%', maxWidth: '500px', 
             borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
             display: 'flex', flexDirection: 'column'
           }}>
             {/* Header Modal */}
-            <div style={{ padding: '1.25rem', borderBottom: '1px solid #e5e7eb' }}>
-              <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600, color: '#111827' }}>
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-default)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                 Tạo ngân hàng câu hỏi mới
               </h3>
             </div>
@@ -241,7 +241,7 @@ const NganHangCauHoiList = () => {
             {/* Body Modal */}
             <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>Tên</label>
+                <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>Tên</label>
                 <input 
                   type="text" 
                   value={newBankName}
@@ -250,8 +250,8 @@ const NganHangCauHoiList = () => {
                   autoFocus
                   style={{
                     width: '100%', padding: '0.625rem', fontSize: '0.875rem',
-                    border: '1px solid #d1d5db', borderRadius: '0.375rem', 
-                    outline: 'none', color: '#111827'
+                    border: '1px solid var(--border-default)', borderRadius: '0.375rem', 
+                    outline: 'none', color: 'var(--text-primary)'
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
                   onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
@@ -259,14 +259,14 @@ const NganHangCauHoiList = () => {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>Môn học</label>
+                <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>Môn học</label>
                 <select 
                   value={newBankSubject}
                   onChange={(e) => setNewBankSubject(e.target.value)}
                   style={{
                     width: '100%', padding: '0.625rem', fontSize: '0.875rem',
-                    border: '1px solid #d1d5db', borderRadius: '0.375rem', 
-                    outline: 'none', color: '#111827', backgroundColor: '#fff',
+                    border: '1px solid var(--border-default)', borderRadius: '0.375rem', 
+                    outline: 'none', color: 'var(--text-primary)', backgroundColor: '#fff',
                     appearance: 'none', 
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem'
@@ -291,7 +291,7 @@ const NganHangCauHoiList = () => {
                 onClick={() => setIsModalOpen(false)}
                 style={{
                   padding: '0.5rem 1.25rem', fontSize: '0.875rem', fontWeight: 500,
-                  background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '0.375rem',
+                  background: 'var(--bg-surface-muted)', color: 'var(--text-primary)', border: 'none', borderRadius: '0.375rem',
                   cursor: 'pointer', transition: 'background 0.2s'
                 }}
                 onMouseOver={(e) => e.currentTarget.style.background = '#e5e7eb'}
@@ -328,19 +328,19 @@ const NganHangCauHoiList = () => {
         onClick={() => setIsEditModalOpen(false)}
         >
           <div style={{
-            background: '#ffffff', width: '100%', maxWidth: '440px', 
+            background: 'var(--bg-surface)', width: '100%', maxWidth: '440px', 
             borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
             display: 'flex', flexDirection: 'column'
           }}
           onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ padding: '1.25rem', borderBottom: '1px solid #f3f4f6' }}>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#1f2937' }}>
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-default)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 Cập nhật ngân hàng
               </h3>
             </div>
             <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1f2937' }}>Tên ngân hàng</label>
+              <label style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>Tên ngân hàng</label>
               <input 
                 type="text" 
                 value={editBankName}
@@ -349,19 +349,19 @@ const NganHangCauHoiList = () => {
                 style={{
                   width: '100%', padding: '0.625rem 0.875rem', fontSize: '1rem',
                   border: '1px solid #1f2937', borderRadius: '0.375rem', 
-                  outline: 'none', color: '#1f2937', fontWeight: 500
+                  outline: 'none', color: 'var(--text-primary)', fontWeight: 500
                 }}
               />
             </div>
             <div style={{ 
-              padding: '1.25rem', borderTop: '1px solid #f3f4f6', 
+              padding: '1.25rem', borderTop: '1px solid var(--border-default)', 
               display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' 
             }}>
               <button 
                 onClick={() => setIsEditModalOpen(false)}
                 style={{
                   padding: '0.6rem 1.75rem', fontSize: '0.95rem', fontWeight: 600,
-                  background: '#f1f5f9', color: '#4b5563', border: 'none', borderRadius: '0.375rem',
+                  background: 'var(--bg-page)', color: 'var(--text-secondary)', border: 'none', borderRadius: '0.375rem',
                   cursor: 'pointer'
                 }}
               >
@@ -393,7 +393,7 @@ const NganHangCauHoiList = () => {
         onClick={() => setIsDeleteModalOpen(false)}
         >
           <div style={{
-            background: '#ffffff', width: '100%', maxWidth: '520px', 
+            background: 'var(--bg-surface)', width: '100%', maxWidth: '520px', 
             borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
             display: 'flex', flexDirection: 'column'
           }}
@@ -404,19 +404,19 @@ const NganHangCauHoiList = () => {
                 <polyline points="3 6 5 6 21 6"></polyline>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
               </svg>
-              <div style={{ fontSize: '1.05rem', color: '#1f2937', lineHeight: 1.6 }}>
+              <div style={{ fontSize: '1.05rem', color: 'var(--text-primary)', lineHeight: 1.6 }}>
                 Bạn có chắc chắn muốn xóa ngân hàng <span style={{ fontWeight: 700 }}>{targetBank.ten}</span>? Toàn bộ cấu trúc và câu hỏi bên trong cũng sẽ bị ảnh hưởng.
               </div>
             </div>
             <div style={{ 
-              padding: '1.25rem 1.5rem', borderTop: '1px solid #f3f4f6', 
+              padding: '1.25rem 1.5rem', borderTop: '1px solid var(--border-default)', 
               display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' 
             }}>
               <button 
                 onClick={() => setIsDeleteModalOpen(false)}
                 style={{
                   padding: '0.625rem 1.75rem', fontSize: '0.95rem', fontWeight: 600,
-                  background: '#f1f5f9', color: '#4b5563', border: 'none', borderRadius: '0.375rem',
+                  background: 'var(--bg-page)', color: 'var(--text-secondary)', border: 'none', borderRadius: '0.375rem',
                   cursor: 'pointer'
                 }}
               >

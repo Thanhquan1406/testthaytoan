@@ -95,6 +95,11 @@ router.delete('/lop-hoc/:id', lopHocCtrl.remove);
 // Kết quả
 router.get('/ket-qua/de-thi', ketQuaCtrl.getDanhSachDeThi);
 router.get('/ket-qua/lop', ketQuaCtrl.getDanhSachLop);
+router.get('/ket-qua/phan-tich/histogram', ketQuaCtrl.getHistogram);
+router.get('/ket-qua/phan-tich/do-kho-cau-hoi', ketQuaCtrl.getQuestionDifficulty);
+router.get('/ket-qua/phan-tich/so-sanh-lop', ketQuaCtrl.getClassComparison);
+router.get('/ket-qua/export/excel', ketQuaCtrl.exportExcel);
+router.get('/ket-qua/export/pdf', ketQuaCtrl.exportPDF);
 router.get('/ket-qua/phien/:phienThiId/xem', ketQuaCtrl.xemBaiThi);
 router.get('/ket-qua', ketQuaCtrl.getKetQua);
 router.put('/ket-qua/:phienThiId/ghi-chu', ketQuaCtrl.updateGhiChu);

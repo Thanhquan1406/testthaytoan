@@ -5,8 +5,23 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getKetQua, getDanhSachDeThi, getDanhSachLop, capNhatGhiChu } from '../../services/ketQuaService';
-import LoadingSpinner from '../../components/common/LoadingSpinner';
+import {
+  getKetQua,
+  getDanhSachDeThi,
+  getDanhSachLop,
+  capNhatGhiChu,
+  getHistogram,
+  getQuestionDifficulty,
+  getClassComparison,
+  exportKetQuaExcel,
+  exportKetQuaPDF,
+} from '../../services/ketQuaService';
+import { SkeletonTable } from '../../components/common/Skeleton';
+import AnalyticsSummaryCards from '../../components/giaoVien/analytics/AnalyticsSummaryCards';
+import ScoreHistogramChart from '../../components/giaoVien/analytics/ScoreHistogramChart';
+import QuestionDifficultyChart from '../../components/giaoVien/analytics/QuestionDifficultyChart';
+import ClassComparisonChart from '../../components/giaoVien/analytics/ClassComparisonChart';
+import { notify } from '../../utils/notify';
 
 const KetQua = () => {
   const [deThiId, setDeThiId] = useState('');
@@ -24,6 +39,24 @@ const KetQua = () => {
     enabled: !!deThiId,
   });
 
+  const { data: histogram } = useQuery({
+    queryKey: ['gv-ket-qua-histogram', deThiId, lopHocId],
+    queryFn: () => getHistogram({ deThiId, lopHocId, binSize: 1 }),
+    enabled: !!deThiId,
+  });
+
+  const { data: questionDifficulty } = useQuery({
+    queryKey: ['gv-ket-qua-difficulty', deThiId, lopHocId],
+    queryFn: () => getQuestionDifficulty({ deThiId, lopHocId }),
+    enabled: !!deThiId,
+  });
+
+  const { data: classComparison } = useQuery({
+    queryKey: ['gv-ket-qua-class-comparison', deThiId],
+    queryFn: () => getClassComparison({ deThiId }),
+    enabled: !!deThiId,
+  });
+
   const updateGhiChuMutation = useMutation({
     mutationFn: ({ phienThiId, ghiChu }) => capNhatGhiChu(phienThiId, ghiChu),
     onSuccess: () => {
@@ -33,12 +66,12 @@ const KetQua = () => {
 
   const selectStyle = {
     padding: '0.65rem 0.85rem',
-    border: '1px solid #d1d5db',
+    border: '1px solid var(--border-default)',
     borderRadius: '0.7rem',
-    background: '#fff',
+    background: 'var(--bg-surface)',
     fontSize: '0.875rem',
     minWidth: '220px',
-    color: '#111827',
+    color: 'var(--text-primary)',
   };
 
   const scoreList = ketQua?.map((item) => item?.ketQua?.tongDiem).filter((score) => typeof score === 'number') ?? [];
@@ -49,19 +82,45 @@ const KetQua = () => {
 
   const formatScore = (score) => (typeof score === 'number' ? score.toFixed(2) : '—');
   const getScorePillStyle = (score) => {
-    if (typeof score !== 'number') return { background: '#f3f4f6', color: '#6b7280' };
+    if (typeof score !== 'number') return { background: 'var(--bg-surface-muted)', color: 'var(--text-secondary)' };
     if (score >= 8) return { background: '#dcfce7', color: '#166534' };
     if (score >= 5) return { background: '#dbeafe', color: '#1d4ed8' };
     return { background: '#fee2e2', color: '#b91c1c' };
   };
 
-  const statCardStyle = {
-    flex: '1 1 220px',
-    background: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: '0.9rem',
-    padding: '1rem',
-    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.04)',
+  const handleDownload = (blob, filename) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const onExportExcel = async () => {
+    if (!deThiId) {
+      notify.warning('Vui lòng chọn đề thi trước khi xuất báo cáo.');
+      return;
+    }
+    try {
+      const blob = await exportKetQuaExcel({ deThiId, lopHocId });
+      handleDownload(blob, `bao-cao-ket-qua-${Date.now()}.xlsx`);
+    } catch (err) {
+      notify.error(err.message);
+    }
+  };
+
+  const onExportPDF = async () => {
+    if (!deThiId) {
+      notify.warning('Vui lòng chọn đề thi trước khi xuất báo cáo.');
+      return;
+    }
+    try {
+      const blob = await exportKetQuaPDF({ deThiId, lopHocId });
+      handleDownload(blob, `bao-cao-ket-qua-${Date.now()}.pdf`);
+    } catch (err) {
+      notify.error(err.message);
+    }
   };
 
   return (
@@ -88,8 +147,8 @@ const KetQua = () => {
           marginBottom: '1.1rem',
           flexWrap: 'wrap',
           alignItems: 'center',
-          background: '#fff',
-          border: '1px solid #e5e7eb',
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border-default)',
           borderRadius: '0.9rem',
           padding: '1rem',
         }}
@@ -102,52 +161,60 @@ const KetQua = () => {
           <option value="">Tất cả lớp</option>
           {lopHoc?.map((l) => <option key={l._id} value={l._id}>{l.ten}</option>)}
         </select>
+        <button
+          onClick={onExportExcel}
+          style={{ padding: '0.6rem 0.8rem', border: 'none', borderRadius: '0.7rem', background: '#0f766e', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+        >
+          Xuat Excel
+        </button>
+        <button
+          onClick={onExportPDF}
+          style={{ padding: '0.6rem 0.8rem', border: 'none', borderRadius: '0.7rem', background: '#b91c1c', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+        >
+          Xuat PDF
+        </button>
       </div>
 
       {!deThiId && (
         <div
           style={{
-            background: '#f8fafc',
+            background: 'var(--bg-surface-muted)',
             borderRadius: '0.9rem',
             border: '1px dashed #cbd5e1',
             padding: '3rem',
             textAlign: 'center',
-            color: '#64748b',
+            color: 'var(--text-secondary)',
           }}
         >
           Chọn một đề thi để xem kết quả
         </div>
       )}
 
-      {isLoading && deThiId && <LoadingSpinner />}
+      {isLoading && deThiId && <SkeletonTable rows={6} cols={7} />}
 
       {ketQua && !isLoading && (
         <div>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            <div style={statCardStyle}>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>Tổng bài nộp</p>
-              <p style={{ margin: '0.4rem 0 0', fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>{tongBai}</p>
-            </div>
-            <div style={statCardStyle}>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>Điểm trung bình</p>
-              <p style={{ margin: '0.4rem 0 0', fontSize: '1.5rem', fontWeight: 700, color: '#4f46e5' }}>{formatScore(diemTrungBinh)}</p>
-            </div>
-            <div style={statCardStyle}>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>Điểm cao nhất</p>
-              <p style={{ margin: '0.4rem 0 0', fontSize: '1.5rem', fontWeight: 700, color: '#0f766e' }}>{formatScore(diemCaoNhat)}</p>
-            </div>
-            <div style={statCardStyle}>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>Số lượng đạt (>= 5)</p>
-              <p style={{ margin: '0.4rem 0 0', fontSize: '1.5rem', fontWeight: 700, color: '#166534' }}>{soLuongDat}</p>
-            </div>
+          <AnalyticsSummaryCards
+            tongBai={tongBai}
+            diemTrungBinh={diemTrungBinh}
+            diemCaoNhat={diemCaoNhat}
+            soLuongDat={soLuongDat}
+          />
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+            <ScoreHistogramChart bins={histogram?.bins || []} />
+            <QuestionDifficultyChart data={questionDifficulty?.data || []} />
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <ClassComparisonChart data={classComparison?.data || []} />
           </div>
 
-          <div style={{ background: '#fff', borderRadius: '0.9rem', border: '1px solid #e5e7eb', overflowX: 'auto' }}>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '0.9rem', border: '1px solid var(--border-default)', overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '920px' }}>
             <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>
+              <tr style={{ background: 'var(--bg-surface-muted)', borderBottom: '1px solid var(--border-default)' }}>
                 {['STT', 'Học viên', 'Lớp', 'Điểm', 'Thời gian nộp', 'Ghi chú', 'Thao tác'].map(h => (
-                  <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.8rem', fontWeight: 600, color: '#6b7280' }}>{h}</th>
+                  <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -157,12 +224,12 @@ const KetQua = () => {
                 const score = k.ketQua?.tongDiem;
                 const scorePillStyle = getScorePillStyle(score);
                 return (
-                <tr key={k._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '0.75rem 1rem', color: '#6b7280' }}>{i + 1}</td>
+                <tr key={k._id} style={{ borderBottom: '1px solid var(--border-default)' }}>
+                  <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)' }}>{i + 1}</td>
                   <td style={{ padding: '0.75rem 1rem', fontWeight: 500 }}>
                     {k.nguoiDungId ? `${k.nguoiDungId.ho} ${k.nguoiDungId.ten}` : k.hoTenAnDanh || 'Ẩn danh'}
                   </td>
-                  <td style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', color: '#6b7280' }}>{k.lopHocId?.ten || '—'}</td>
+                  <td style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{k.lopHocId?.ten || '—'}</td>
                   <td style={{ padding: '0.75rem 1rem' }}>
                     <span
                       style={{
@@ -179,7 +246,7 @@ const KetQua = () => {
                       {formatScore(score)}
                     </span>
                   </td>
-                  <td style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                  <td style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     {k.thoiGianNop ? new Date(k.thoiGianNop).toLocaleString('vi') : '—'}
                   </td>
                   <td style={{ padding: '0.75rem 1rem', fontSize: '0.8rem' }}>
@@ -188,7 +255,7 @@ const KetQua = () => {
                         value={currentNote}
                         onChange={(e) => setEditingNotes((prev) => ({ ...prev, [k._id]: e.target.value }))}
                         placeholder="Nhập ghi chú"
-                        style={{ padding: '0.4rem 0.55rem', border: '1px solid #d1d5db', borderRadius: '0.45rem', minWidth: '180px' }}
+                        style={{ padding: '0.4rem 0.55rem', border: '1px solid var(--border-default)', borderRadius: '0.45rem', minWidth: '180px' }}
                       />
                       <button
                         onClick={() => updateGhiChuMutation.mutate({ phienThiId: k._id, ghiChu: currentNote.trim() })}

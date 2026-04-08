@@ -21,6 +21,8 @@
 
 const mammoth = require('mammoth');
 const pdfParse = require('pdf-parse');
+const ExcelJS = require('exceljs');
+const PDFDocument = require('pdfkit');
 
 /**
  * Chuẩn hoá văn bản thô → danh sách câu hỏi trắc nghiệm
@@ -158,11 +160,135 @@ const importPdf = async (buffer) => {
  * Xuất kết quả thi ra file Excel
  * @param {object[]} ketQuas
  * @param {string} tenDeThi
+ * @param {object} analytics
  * @returns {Promise<Buffer>}
- * @todo Implement with exceljs
  */
-const exportKetQuaExcel = async (ketQuas, tenDeThi) => {
-  throw new Error('Tính năng xuất Excel sẽ có ở Phase 2');
+const exportKetQuaExcel = async (ketQuas, tenDeThi, analytics = {}) => {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'WEB_THI_TRAC_NGHIEM';
+  workbook.created = new Date();
+
+  const dataSheet = workbook.addWorksheet('KetQuaChiTiet');
+  dataSheet.columns = [
+    { header: 'STT', key: 'stt', width: 8 },
+    { header: 'HocVien', key: 'hocVien', width: 32 },
+    { header: 'Lop', key: 'lop', width: 24 },
+    { header: 'Diem', key: 'diem', width: 12 },
+    { header: 'ThoiGianNop', key: 'thoiGianNop', width: 24 },
+    { header: 'GhiChu', key: 'ghiChu', width: 50 },
+  ];
+
+  ketQuas.forEach((k, i) => {
+    dataSheet.addRow({
+      stt: i + 1,
+      hocVien: k.nguoiDungId ? `${k.nguoiDungId.ho} ${k.nguoiDungId.ten}` : (k.hoTenAnDanh || 'Ẩn danh'),
+      lop: k.lopHocId?.ten || '—',
+      diem: Number(k.ketQua?.tongDiem ?? 0),
+      thoiGianNop: k.thoiGianNop ? new Date(k.thoiGianNop).toLocaleString('vi-VN') : '—',
+      ghiChu: k.ketQua?.ghiChu || '',
+    });
+  });
+
+  const summarySheet = workbook.addWorksheet('TongQuan');
+  const scores = ketQuas
+    .map((k) => Number(k.ketQua?.tongDiem))
+    .filter((n) => Number.isFinite(n));
+  const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+  const max = scores.length ? Math.max(...scores) : 0;
+  const min = scores.length ? Math.min(...scores) : 0;
+  const passCount = scores.filter((s) => s >= 5).length;
+  const passRate = scores.length ? (passCount / scores.length) * 100 : 0;
+
+  summarySheet.addRows([
+    ['Bao cao ket qua thi'],
+    ['De thi', tenDeThi],
+    ['Ngay xuat', new Date().toLocaleString('vi-VN')],
+    [],
+    ['Tong bai nop', ketQuas.length],
+    ['Diem trung binh', Number(avg.toFixed(2))],
+    ['Diem cao nhat', Number(max.toFixed(2))],
+    ['Diem thap nhat', Number(min.toFixed(2))],
+    ['Ty le dat (>=5)', `${passRate.toFixed(2)}%`],
+  ]);
+
+  const histogramSheet = workbook.addWorksheet('Histogram');
+  histogramSheet.columns = [
+    { header: 'KhoangDiem', key: 'label', width: 20 },
+    { header: 'SoLuong', key: 'count', width: 12 },
+  ];
+  (analytics.histogram?.bins || []).forEach((b) => histogramSheet.addRow({ label: b.label, count: b.count }));
+
+  const classSheet = workbook.addWorksheet('SoSanhLop');
+  classSheet.columns = [
+    { header: 'TenLop', key: 'tenLop', width: 30 },
+    { header: 'SoBaiNop', key: 'count', width: 12 },
+    { header: 'DiemTB', key: 'avg', width: 12 },
+    { header: 'Max', key: 'max', width: 10 },
+    { header: 'Min', key: 'min', width: 10 },
+    { header: 'TyLeDat', key: 'passRate', width: 14 },
+  ];
+  (analytics.classComparison?.data || []).forEach((c) => classSheet.addRow(c));
+
+  const difficultySheet = workbook.addWorksheet('DoKhoCauHoi');
+  difficultySheet.columns = [
+    { header: 'ThuTu', key: 'thuTu', width: 10 },
+    { header: 'NoiDung', key: 'noiDung', width: 60 },
+    { header: 'TyLeDung(%)', key: 'tiLeDung', width: 14 },
+    { header: 'MucDo', key: 'mucDo', width: 15 },
+    { header: 'SoDung', key: 'soDung', width: 10 },
+    { header: 'TongBaiLam', key: 'tongBaiLam', width: 12 },
+  ];
+  (analytics.questionDifficulty?.data || []).forEach((q) => difficultySheet.addRow(q));
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
 };
 
-module.exports = { importDocx, importPdf, exportKetQuaExcel, parseCauHoiFromText };
+const exportKetQuaPDF = async (ketQuas, tenDeThi, analytics = {}) => {
+  const doc = new PDFDocument({ size: 'A4', margin: 40 });
+  const chunks = [];
+  doc.on('data', (chunk) => chunks.push(chunk));
+
+  const scores = ketQuas
+    .map((k) => Number(k.ketQua?.tongDiem))
+    .filter((n) => Number.isFinite(n));
+  const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+
+  doc.fontSize(16).text('Bao cao ket qua thi', { align: 'left' });
+  doc.moveDown(0.5);
+  doc.fontSize(11).text(`De thi: ${tenDeThi}`);
+  doc.text(`Ngay xuat: ${new Date().toLocaleString('vi-VN')}`);
+  doc.text(`Tong bai nop: ${ketQuas.length}`);
+  doc.text(`Diem trung binh: ${avg.toFixed(2)}`);
+  doc.moveDown(0.8);
+
+  doc.fontSize(12).text('So sanh lop');
+  (analytics.classComparison?.data || []).slice(0, 10).forEach((row) => {
+    doc
+      .fontSize(10)
+      .text(`${row.tenLop}: TB ${row.avg}, Dat ${row.passRate}% (${row.count} bai)`);
+  });
+  doc.moveDown(0.6);
+
+  doc.fontSize(12).text('Histogram diem');
+  (analytics.histogram?.bins || []).forEach((b) => {
+    doc.fontSize(10).text(`${b.label}: ${b.count}`);
+  });
+  doc.moveDown(0.6);
+
+  doc.fontSize(12).text('Top cau hoi kho (ti le dung thap)');
+  (analytics.questionDifficulty?.data || [])
+    .slice()
+    .sort((a, b) => a.tiLeDung - b.tiLeDung)
+    .slice(0, 10)
+    .forEach((q) => {
+      doc.fontSize(10).text(`Cau ${q.thuTu} - ${q.tiLeDung}% (${q.mucDo})`);
+    });
+
+  doc.end();
+  return await new Promise((resolve) => {
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+  });
+};
+
+module.exports = { importDocx, importPdf, exportKetQuaExcel, exportKetQuaPDF, parseCauHoiFromText };

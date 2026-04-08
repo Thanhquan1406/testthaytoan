@@ -25,16 +25,16 @@ const Dashboard = () => {
 
   return (
     <div>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', marginBottom: '0.25rem' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
         Xin chào, {user?.ho} {user?.ten}! 👋
       </h1>
-      <p style={{ color: '#6b7280', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+      <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
         Đây là tổng quan hoạt động của bạn
       </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
         {/* Đề thi gần đây */}
-        <div style={{ background: '#fff', borderRadius: '0.75rem', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <div style={{ background: 'var(--bg-surface)', borderRadius: '0.75rem', padding: '1.5rem', boxShadow: 'var(--shadow)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h2 style={{ fontWeight: 600, fontSize: '1rem' }}>📄 Đề thi gần đây</h2>
             <button onClick={() => navigate('/giao-vien/de-thi')} style={{ fontSize: '0.8rem', color: '#4f46e5', background: 'none', border: 'none', cursor: 'pointer' }}>Xem tất cả →</button>
@@ -42,20 +42,20 @@ const Dashboard = () => {
           {loadDeThi ? <LoadingSpinner size="sm" /> : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {deThiData?.data?.slice(0, 5).map((d) => (
-                <div key={d._id} style={{ padding: '0.625rem', background: '#f9fafb', borderRadius: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div key={d._id} style={{ padding: '0.625rem', background: 'var(--bg-surface-muted)', borderRadius: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>{d.ten}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{d.monHocId?.ten} • {d.thoiGianPhut} phút</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{d.monHocId?.ten} • {d.thoiGianPhut} phút</div>
                   </div>
                 </div>
               ))}
-              {(!deThiData?.data?.length) && <p style={{ color: '#9ca3af', textAlign: 'center', fontSize: '0.875rem' }}>Chưa có đề thi nào</p>}
+              {(!deThiData?.data?.length) && <p style={{ color: 'var(--text-secondary)', textAlign: 'center', fontSize: '0.875rem' }}>Chưa có đề thi nào</p>}
             </div>
           )}
         </div>
 
         {/* Lớp học */}
-        <div style={{ background: '#fff', borderRadius: '0.75rem', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <div style={{ background: 'var(--bg-surface)', borderRadius: '0.75rem', padding: '1.5rem', boxShadow: 'var(--shadow)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h2 style={{ fontWeight: 600, fontSize: '1rem' }}>🏫 Lớp học</h2>
             <button onClick={() => navigate('/giao-vien/lop-hoc')} style={{ fontSize: '0.8rem', color: '#4f46e5', background: 'none', border: 'none', cursor: 'pointer' }}>Xem tất cả →</button>
@@ -63,11 +63,11 @@ const Dashboard = () => {
           {loadLop ? <LoadingSpinner size="sm" /> : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {lopHocs?.slice(0, 5).map((l) => (
-                <div key={l._id} style={{ padding: '0.625rem', background: '#f9fafb', borderRadius: '0.5rem' }}>
+                <div key={l._id} style={{ padding: '0.625rem', background: 'var(--bg-surface-muted)', borderRadius: '0.5rem' }}>
                   <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>{l.ten}</div>
                 </div>
               ))}
-              {!lopHocs?.length && <p style={{ color: '#9ca3af', textAlign: 'center', fontSize: '0.875rem' }}>Chưa có lớp học nào</p>}
+              {!lopHocs?.length && <p style={{ color: 'var(--text-secondary)', textAlign: 'center', fontSize: '0.875rem' }}>Chưa có lớp học nào</p>}
             </div>
           )}
         </div>
