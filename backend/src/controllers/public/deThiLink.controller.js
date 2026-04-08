@@ -5,7 +5,6 @@
 const thiService = require('../../services/thi.service');
 const DeThi = require('../../models/DeThi');
 const { success, created } = require('../../utils/apiResponse');
-const { TRANG_THAI_DE_THI } = require('../../utils/constants');
 
 /**
  * GET /api/public/de-thi-link/:maTruyCap/thong-tin
@@ -15,7 +14,6 @@ const getThongTin = async (req, res, next) => {
   try {
     const deThi = await DeThi.findOne({
       maTruyCap: req.params.maTruyCap,
-      trangThai: TRANG_THAI_DE_THI.CONG_KHAI,
       deletedAt: null,
     })
       .populate('monHocId', 'ten')

@@ -3,6 +3,8 @@
  * Hỗ trợ 3 loại: trắc nghiệm, đúng/sai, tự luận.
  */
 
+import MathText from '../common/MathText';
+
 /**
  * @param {{
  *   cauHoi: object,
@@ -63,7 +65,7 @@ const QuestionCard = ({ cauHoi, soThuTu, selectedAnswer, onAnswer, readonly = fa
         <span style={{ color: '#4f46e5', fontWeight: 600, marginRight: '0.5rem' }}>
           Câu {soThuTu}:
         </span>
-        <span style={{ color: '#111827' }}>{noiDung}</span>
+        <span style={{ color: '#111827' }}><MathText>{noiDung}</MathText></span>
       </div>
 
       {/* Lựa chọn theo loại câu hỏi */}
@@ -74,7 +76,7 @@ const QuestionCard = ({ cauHoi, soThuTu, selectedAnswer, onAnswer, readonly = fa
             .map(([label, value]) => (
               <div key={label} style={optionStyle(label, value)} onClick={() => handleSelect(label)}>
                 <LabelBadge label={label} />
-                <span>{value}</span>
+                <MathText>{value}</MathText>
               </div>
             ))}
         </div>

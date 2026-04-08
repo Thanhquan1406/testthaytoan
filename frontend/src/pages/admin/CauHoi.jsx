@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getDanhSachCauHoi } from '../../services/adminService';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Pagination from '../../components/common/Pagination';
+import MathText from '../../components/common/MathText';
 
 const LOAI_LABEL = {
   TRAC_NGHIEM: 'Trắc nghiệm',
@@ -71,7 +72,7 @@ const CauHoi = () => {
                   <tr key={q._id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                     <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem', maxWidth: '420px' }}>
                       <div style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                        {q.noiDung || '—'}
+                        <MathText>{q.noiDung || '—'}</MathText>
                       </div>
                     </td>
                     <td style={{ padding: '0.75rem 1rem', fontSize: '0.875rem' }}>{getMonHoc(q)}</td>

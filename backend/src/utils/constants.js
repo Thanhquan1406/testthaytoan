@@ -14,14 +14,6 @@ const VAI_TRO = Object.freeze({
   THI_AN_DANH: 'THI_AN_DANH',
 });
 
-/**
- * Trạng thái đề thi
- * @enum {string}
- */
-const TRANG_THAI_DE_THI = Object.freeze({
-  NHAP: 'NHAP',
-  CONG_KHAI: 'CONG_KHAI',
-});
 
 /**
  * Trạng thái phiên thi
@@ -107,7 +99,6 @@ const HANH_VI_VI_PHAM = Object.freeze({
 
 module.exports = {
   VAI_TRO,
-  TRANG_THAI_DE_THI,
   TRANG_THAI_PHIEN_THI,
   TRANG_THAI_TRA_LOI,
   TRANG_THAI_CHAM,

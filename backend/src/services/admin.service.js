@@ -11,7 +11,7 @@ const CauHoi = require('../models/CauHoi');
 const ChuDe = require('../models/ChuDe');
 const NganHang = require('../models/NganHang');
 const PhienThi = require('../models/PhienThi');
-const { VAI_TRO, TRANG_THAI_DE_THI } = require('../utils/constants');
+const { VAI_TRO } = require('../utils/constants');
 const { getPaginationParams, buildPaginationMeta } = require('../utils/pagination');
 
 const SALT_ROUNDS = 12;
@@ -186,11 +186,10 @@ const xoaMonHoc = async (id) => {
  */
 const layDanhSachDeThi = async (query) => {
   const { page, limit, skip } = getPaginationParams(query);
-  const { giaoVienId, trangThai } = query;
+  const { giaoVienId } = query;
 
   const filter = { deletedAt: null };
   if (giaoVienId) filter.nguoiDungId = giaoVienId;
-  if (trangThai && Object.values(TRANG_THAI_DE_THI).includes(trangThai)) filter.trangThai = trangThai;
 
   const [data, total] = await Promise.all([
     DeThi.find(filter)
@@ -212,16 +211,12 @@ const layDanhSachDeThi = async (query) => {
  */
 const layThongKeDeThiAdmin = async () => {
   const base = { deletedAt: null };
-  const [tongDeThi, deNhap, congKhai, nguoiDungIds] = await Promise.all([
+  const [tongDeThi, nguoiDungIds] = await Promise.all([
     DeThi.countDocuments(base),
-    DeThi.countDocuments({ ...base, trangThai: TRANG_THAI_DE_THI.NHAP }),
-    DeThi.countDocuments({ ...base, trangThai: TRANG_THAI_DE_THI.CONG_KHAI }),
     DeThi.distinct('nguoiDungId', base),
   ]);
   return {
     tongDeThi,
-    deNhap,
-    congKhai,
     soGiangVien: nguoiDungIds.filter(Boolean).length,
   };
 };

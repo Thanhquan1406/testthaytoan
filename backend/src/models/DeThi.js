@@ -5,7 +5,6 @@
  */
 
 const mongoose = require('mongoose');
-const { TRANG_THAI_DE_THI } = require('../utils/constants');
 
 /** Sub-document: câu hỏi trong đề thi */
 const cauHoiTrongDeSchema = new mongoose.Schema(
@@ -102,11 +101,6 @@ const deThiSchema = new mongoose.Schema(
       ref: 'NguoiDung',
       required: true,
     },
-    trangThai: {
-      type: String,
-      enum: Object.values(TRANG_THAI_DE_THI),
-      default: TRANG_THAI_DE_THI.NHAP,
-    },
 
     cauHois: [cauHoiTrongDeSchema],
     lopHocIds: [lopHocTrongDeSchema],
@@ -122,7 +116,6 @@ const deThiSchema = new mongoose.Schema(
 
 /** Index cho query thường gặp */
 deThiSchema.index({ nguoiDungId: 1, deletedAt: 1 });
-deThiSchema.index({ trangThai: 1, deletedAt: 1 });
 deThiSchema.index({ maTruyCap: 1 });
 
 const DeThi = mongoose.model('DeThi', deThiSchema);

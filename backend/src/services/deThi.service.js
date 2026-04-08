@@ -7,7 +7,6 @@ const DeThi = require('../models/DeThi');
 const CauHoi = require('../models/CauHoi');
 const ChuDe = require('../models/ChuDe');
 const MonHoc = require('../models/MonHoc');
-const { TRANG_THAI_DE_THI } = require('../utils/constants');
 const { importDocx, importPdf } = require('./importExport.service');
 const { getPaginationParams, buildPaginationMeta } = require('../utils/pagination');
 const { generateAccessCode, toSlug } = require('../utils/slugify');
@@ -24,10 +23,9 @@ const TIEN_TO_DUONG_DAN = '/thi-mo/';
  */
 const layDanhSach = async (giaoVienId, query) => {
   const { page, limit, skip } = getPaginationParams(query);
-  const { trangThai, monHocId, search } = query;
+  const { monHocId, search } = query;
 
   const filter = { nguoiDungId: giaoVienId, deletedAt: null };
-  if (trangThai) filter.trangThai = trangThai;
   if (monHocId) filter.monHocId = monHocId;
   if (search) filter.ten = { $regex: search, $options: 'i' };
 
@@ -84,7 +82,7 @@ const layChiTiet = async (deThiId, giaoVienId) => {
 const taoDeThi = async (giaoVienId, data) => {
   const {
     monHocId, ten, moTa, thoiGianPhut, soLanThiToiDa,
-    tronCauHoi, tronDapAn, choPhepXemLai, trangThai,
+    tronCauHoi, tronDapAn, choPhepXemLai,
     thoiGianMo, thoiGianDong, thangDiemToiDa,
     doiTuongThi, cheDoXemDiem, cheDoXemDapAn, diemToiThieuXemDapAn,
     lopHocIds, sinhVienIds, cauHois
@@ -99,7 +97,6 @@ const taoDeThi = async (giaoVienId, data) => {
     tronCauHoi: tronCauHoi || false,
     tronDapAn: tronDapAn || false,
     choPhepXemLai: choPhepXemLai !== false,
-    trangThai: trangThai || TRANG_THAI_DE_THI.NHAP,
     thoiGianMo: thoiGianMo || null,
     thoiGianDong: thoiGianDong || null,
     thangDiemToiDa: thangDiemToiDa || null,
@@ -130,7 +127,7 @@ const taoDeThi = async (giaoVienId, data) => {
 const capNhatDeThi = async (deThiId, giaoVienId, data) => {
   const {
     ten, moTa, thoiGianPhut, soLanThiToiDa, monHocId,
-    tronCauHoi, tronDapAn, choPhepXemLai, trangThai,
+    tronCauHoi, tronDapAn, choPhepXemLai,
     thoiGianMo, thoiGianDong, thangDiemToiDa,
     doiTuongThi, cheDoXemDiem, cheDoXemDapAn, diemToiThieuXemDapAn,
     lopHocIds, sinhVienIds
@@ -141,7 +138,7 @@ const capNhatDeThi = async (deThiId, giaoVienId, data) => {
     {
       $set: {
         ten, moTa, thoiGianPhut, soLanThiToiDa, monHocId,
-        tronCauHoi, tronDapAn, choPhepXemLai, trangThai,
+        tronCauHoi, tronDapAn, choPhepXemLai,
         thoiGianMo, thoiGianDong, thangDiemToiDa,
         ...(doiTuongThi !== undefined && { doiTuongThi }),
         ...(cheDoXemDiem !== undefined && { cheDoXemDiem }),
@@ -258,7 +255,6 @@ const xuatBanChoLop = async (deThiId, giaoVienId, lopHocId) => {
   const daXuatBan = deThi.lopHocIds.some((l) => l.lopHocId.toString() === lopHocId);
   if (!daXuatBan) {
     deThi.lopHocIds.push({ lopHocId, thoiGianXuatBan: new Date() });
-    deThi.trangThai = TRANG_THAI_DE_THI.CONG_KHAI;
     await deThi.save();
   }
   return deThi;

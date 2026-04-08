@@ -26,9 +26,10 @@ const ImportFile = () => {
                 navigate('/ngan-hang/editor', {
                     state: {
                         fileName: name,
-                        rawText: result?.data?.cauHois?.map((q, i) => 
-                            `Câu ${i+1}. ${q.noiDung}\nA. ${q.luaChonA}\nB. ${q.luaChonB}\nC. ${q.luaChonC}\nD. ${q.luaChonD}\nĐáp án: ${q.dapAnDung}`
-                        ).join('\n\n') || '',
+                        rawText: result?.data?.cauHois?.map((q, i) => {
+                            const da = (q.dapAnDung || '').toUpperCase();
+                            return `Câu ${i+1}. ${q.noiDung}\n${da === 'A' ? '*' : ''}A. ${q.luaChonA}\n${da === 'B' ? '*' : ''}B. ${q.luaChonB}\n${da === 'C' ? '*' : ''}C. ${q.luaChonC}\n${da === 'D' ? '*' : ''}D. ${q.luaChonD}`;
+                        }).join('\n\n') || '',
                         selectedBank,
                     }
                 });

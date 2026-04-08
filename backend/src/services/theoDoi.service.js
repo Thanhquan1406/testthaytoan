@@ -58,7 +58,7 @@ const layDanhSachTheoDoi = async (giaoVienId, deThiId, query) => {
  */
 const layDanhSachDeThi = async (giaoVienId) => {
   return DeThi.find({ nguoiDungId: giaoVienId, deletedAt: null })
-    .select('ten maDeThi trangThai')
+    .select('ten maDeThi')
     .sort({ thoiGianTao: -1 })
     .lean();
 };

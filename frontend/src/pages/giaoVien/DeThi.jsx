@@ -15,7 +15,6 @@ const INIT_FORM = {
   monHocId: '',
   thoiGianPhut: 60,
   moTa: '',
-  trangThai: 'NHAP',
   soLanThiToiDa: 0,
   thoiGianMo: '',
   thoiGianDong: '',
@@ -27,7 +26,6 @@ const INIT_EDIT_FORM = {
   monHocId: '',
   thoiGianPhut: 60,
   moTa: '',
-  trangThai: 'NHAP',
   soLanThiToiDa: 0,
   thoiGianMo: '',
   thoiGianDong: '',
@@ -194,7 +192,6 @@ const DeThi = () => {
         monHocId: form.monHocId,
         thoiGianPhut: Number(form.thoiGianPhut) || 60,
         moTa: form.moTa.trim() || undefined,
-        trangThai: form.trangThai,
         soLanThiToiDa: Number(form.soLanThiToiDa) || 0,
         choPhepXemLai: form.choPhepXemLai,
         thoiGianMo: form.thoiGianMo ? new Date(form.thoiGianMo).toISOString() : null,
@@ -221,7 +218,6 @@ const DeThi = () => {
         monHocId: editForm.monHocId,
         thoiGianPhut: Number(editForm.thoiGianPhut) || 60,
         moTa: editForm.moTa.trim() || undefined,
-        trangThai: editForm.trangThai,
         soLanThiToiDa: Number(editForm.soLanThiToiDa) || 0,
         choPhepXemLai: editForm.cheDoXemDapAn !== 'KHONG',
         // datetime-local value "YYYY-MM-DDTHH:mm" → new Date() hiểu là giờ địa phương → toISOString() ra UTC đúng
@@ -271,7 +267,6 @@ const DeThi = () => {
       monHocId: d.monHocId?._id || d.monHocId || '',
       thoiGianPhut: d.thoiGianPhut ?? 60,
       moTa: d.moTa || '',
-      trangThai: d.trangThai || 'NHAP',
       soLanThiToiDa: d.soLanThiToiDa ?? 0,
       thoiGianMo: toDatetimeLocal(d.thoiGianMo),
       thoiGianDong: toDatetimeLocal(d.thoiGianDong),
@@ -329,21 +324,6 @@ const DeThi = () => {
   const isEditFormValid = editForm.ten.trim() && editForm.monHocId;
   const hasFile = !!importFileObj;
 
-  /* ── Badge trạng thái ── */
-  const TrangThaiBadge = ({ trangThai }) => {
-    const map = {
-      NHAP:      { label: 'Nháp',      bg: '#f3f4f6', color: '#6b7280' },
-      CONG_KHAI: { label: 'Công khai', bg: '#dcfce7', color: '#16a34a' },
-      DONG:      { label: 'Đã đóng',   bg: '#fee2e2', color: '#dc2626' },
-    };
-    const s = map[trangThai] || map.NHAP;
-    return (
-      <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: '9999px', background: s.bg, color: s.color }}>
-        {s.label}
-      </span>
-    );
-  };
-
   if (isLoading) return <LoadingSpinner />;
 
   return (
@@ -369,7 +349,6 @@ const DeThi = () => {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <span style={{ fontWeight: 600 }}>{d.ten}</span>
-                <TrangThaiBadge trangThai={d.trangThai} />
               </div>
               <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '2px' }}>
                 {d.monHocId?.ten} • {d.thoiGianPhut} phút • {d.cauHois?.length || 0} câu
@@ -472,13 +451,6 @@ const DeThi = () => {
 
           <FormRow label="Mô Tả">
             <textarea rows={2} value={form.moTa} onChange={set('moTa')} placeholder="Mô tả ngắn về đề thi..." style={{ ...inputStyle, resize: 'vertical' }} />
-          </FormRow>
-
-          <FormRow label="Trạng Thái">
-            <select value={form.trangThai} onChange={set('trangThai')} style={{ ...inputStyle, width: '260px' }}>
-              <option value="NHAP">📝 Nháp (chưa công khai)</option>
-              <option value="CONG_KHAI">🌐 Công khai</option>
-            </select>
           </FormRow>
 
           <FormRow label="Số Lần Thi Tối Đa" hint="Nhập 0 để không giới hạn">

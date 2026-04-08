@@ -47,9 +47,6 @@ const Dashboard = () => {
                     <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>{d.ten}</div>
                     <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{d.monHocId?.ten} • {d.thoiGianPhut} phút</div>
                   </div>
-                  <span style={{ padding: '2px 8px', borderRadius: '9999px', fontSize: '0.7rem', background: d.trangThai === 'CONG_KHAI' ? '#d1fae5' : '#f3f4f6', color: d.trangThai === 'CONG_KHAI' ? '#059669' : '#6b7280', fontWeight: 600 }}>
-                    {d.trangThai === 'CONG_KHAI' ? 'Công khai' : 'Nháp'}
-                  </span>
                 </div>
               ))}
               {(!deThiData?.data?.length) && <p style={{ color: '#9ca3af', textAlign: 'center', fontSize: '0.875rem' }}>Chưa có đề thi nào</p>}

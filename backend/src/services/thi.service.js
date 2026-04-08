@@ -11,7 +11,6 @@ const { taoTokenThiAnDanh } = require('./jwt.service');
 const {
   TRANG_THAI_PHIEN_THI,
   TRANG_THAI_TRA_LOI,
-  TRANG_THAI_DE_THI,
   LOAI_CAU_HOI,
 } = require('../utils/constants');
 
@@ -55,7 +54,6 @@ const batDauThiQuaLop = async (sinhVienId, deThiId, lopHocId) => {
 const batDauThiAnDanh = async (maTruyCap, hoTenAnDanh) => {
   const deThi = await DeThi.findOne({
     maTruyCap,
-    trangThai: TRANG_THAI_DE_THI.CONG_KHAI,
     deletedAt: null,
   });
 

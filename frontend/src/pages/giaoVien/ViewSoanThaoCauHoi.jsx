@@ -4,6 +4,7 @@ import { useAuthContext } from '../../contexts/AuthContext';
 import { layCauTruc, luuCauHoi, layDanhSachMonHoc, layDanhSachNganHang } from '../../services/nganHangService';
 import { taoDeThiTuMaTran, parseFile } from '../../services/deThiService';
 import { getDanhSach as getDanhSachLopHoc, getById as getLopHocById } from '../../services/lopHocService';
+import MathText from '../../components/common/MathText';
 
 const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, generatedQuestions, isDeThiDirect, onClose }) => {
     const { user } = useAuthContext();
@@ -234,16 +235,18 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
             
             if (isDeThiDirect) {
                 const result = await parseFile(file);
-                newText = result?.data?.cauHois?.map((q, i) => 
-                    `Câu ${uploadMode === 'append' ? 1000 + i /* later recalculated */ : i + 1}. ${q.noiDung}\nA. ${q.luaChonA}\nB. ${q.luaChonB}\nC. ${q.luaChonC}\nD. ${q.luaChonD}\nĐáp án: ${q.dapAnDung}`
-                ).join('\n\n') || '';
+                newText = result?.data?.cauHois?.map((q, i) => {
+                    const da = (q.dapAnDung || '').toUpperCase();
+                    return `Câu ${uploadMode === 'append' ? 1000 + i : i + 1}. ${q.noiDung}\n${da === 'A' ? '*' : ''}A. ${q.luaChonA}\n${da === 'B' ? '*' : ''}B. ${q.luaChonB}\n${da === 'C' ? '*' : ''}C. ${q.luaChonC}\n${da === 'D' ? '*' : ''}D. ${q.luaChonD}`;
+                }).join('\n\n') || '';
             } else {
                 const formData = new FormData();
                 formData.append('file', file);
                 const result = await import('../../services/nganHangService').then(m => m.importFile(nganHangId, formData));
-                newText = result?.data?.cauHois?.map((q, i) => 
-                    `Câu ${uploadMode === 'append' ? 1000 + i : i + 1}. ${q.noiDung}\nA. ${q.luaChonA}\nB. ${q.luaChonB}\nC. ${q.luaChonC}\nD. ${q.luaChonD}\nĐáp án: ${q.dapAnDung}`
-                ).join('\n\n') || '';
+                newText = result?.data?.cauHois?.map((q, i) => {
+                    const da = (q.dapAnDung || '').toUpperCase();
+                    return `Câu ${uploadMode === 'append' ? 1000 + i : i + 1}. ${q.noiDung}\n${da === 'A' ? '*' : ''}A. ${q.luaChonA}\n${da === 'B' ? '*' : ''}B. ${q.luaChonB}\n${da === 'C' ? '*' : ''}C. ${q.luaChonC}\n${da === 'D' ? '*' : ''}D. ${q.luaChonD}`;
+                }).join('\n\n') || '';
             }
             
             setRawText(prev => {
@@ -868,7 +871,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
 
                                     {/* Nội dung */}
                                     <div style={{ fontWeight: 600, color: '#374151', marginBottom: '1.25rem', lineHeight: 1.6, fontSize: '0.95rem' }}>
-                                        {q.title.includes('.') ? q.title.substring(q.title.indexOf('.') + 1).trim() : q.title}
+                                        <MathText>{q.title.includes('.') ? q.title.substring(q.title.indexOf('.') + 1).trim() : q.title}</MathText>
                                     </div>
                                     
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -877,7 +880,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
                                             return (
                                                 <div key={aIdx} style={{ display: 'flex', gap: '0.5rem', color: '#1f2937', fontWeight: 500, fontSize: '0.95rem' }}>
                                                     <span style={{ fontWeight: 600 }}>{letters[aIdx]}.</span>
-                                                    <span>{ans.text.replace(/^[A-F]\.\s*/, '')}</span>
+                                                    <MathText>{ans.text.replace(/^[A-F]\.\s*/, '')}</MathText>
                                                 </div>
                                             )
                                         })}
@@ -1353,7 +1356,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
                                 {/* Card Body */}
                                 <div style={{ padding: '1.25rem' }}>
                                     <div style={{ fontWeight: 600, color: '#374151', marginBottom: '1.25rem', lineHeight: 1.6, fontSize: '0.95rem' }}>
-                                        {q.title.includes('.') ? q.title.substring(q.title.indexOf('.') + 1).trim() : q.title}
+                                        <MathText>{q.title.includes('.') ? q.title.substring(q.title.indexOf('.') + 1).trim() : q.title}</MathText>
                                     </div>
                                     
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1377,7 +1380,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
                                                     }}>
                                                         {ans.letter}
                                                     </div>
-                                                    <span style={{ fontSize: '0.95rem', color: '#1f2937' }}>{ans.text}</span>
+                                                    <MathText style={{ fontSize: '0.95rem', color: '#1f2937' }}>{ans.text}</MathText>
                                                 </div>
                                             </div>
                                         ))}
