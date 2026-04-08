@@ -1264,7 +1264,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, gener
                 <div style={{ flex: 1, overflowY: 'auto', padding: '2rem', background: '#f8fafc', position: 'relative', zIndex: 10 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '850px', margin: '0 auto' }}>
                         {parsedQuestions.map((q, idx) => (
-                            <div id={`question-${idx + 1}`} key={idx} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', overflow: 'hidden', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
+                            <div id={`question-${idx + 1}`} key={idx} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', overflow: 'visible', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
                                 {/* Card Header Toolbar */}
                                 <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.85rem' }}>
                                     <span style={{ fontWeight: 600, color: '#2563eb' }}>{q.title.split('.')[0]}.</span>
