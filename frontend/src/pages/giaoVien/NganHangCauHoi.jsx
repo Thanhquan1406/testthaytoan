@@ -1,48 +1,79 @@
 /**
  * @fileoverview Ngân hàng câu hỏi (Giáo viên) - Hiển thị danh sách các ngân hàng câu hỏi.
  */
-import { useQuery } from '@tanstack/react-query';
-import { getDanhSach } from '../../services/cauHoiService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { layDanhSachNganHang, taoNganHang, xoaNganHang, capNhatNganHang, layDanhSachMonHoc } from '../../services/nganHangService';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const NganHangCauHoiList = () => {
-  const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [targetBank, setTargetBank] = useState(null);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   
-  // Local states để demo mượt mà giao diện tạo Ngân hàng
-  const [localBanks, setLocalBanks] = useState([]);
   const [newBankName, setNewBankName] = useState('');
   const [newBankSubject, setNewBankSubject] = useState('');
+  const [editBankName, setEditBankName] = useState('');
 
-  const { data, isLoading } = useQuery({ queryKey: ['gv-cau-hoi', page], queryFn: () => getDanhSach({ page, limit: 10 }) });
+  // Lấy danh sách ngân hàng từ API
+  const { data: banksData, isLoading } = useQuery({
+    queryKey: ['gv-ngan-hang'],
+    queryFn: () => layDanhSachNganHang(),
+  });
+
+  // Lấy danh sách môn học từ API
+  const { data: monHocData } = useQuery({
+    queryKey: ['gv-mon-hoc'],
+    queryFn: () => layDanhSachMonHoc(),
+  });
+
+  // Mutation tạo ngân hàng
+  const createMutation = useMutation({
+    mutationFn: (data) => taoNganHang(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gv-ngan-hang'] });
+      setNewBankName('');
+      setNewBankSubject('');
+      setIsModalOpen(false);
+    },
+  });
+
+  // Mutation cập nhật ngân hàng
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => capNhatNganHang(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gv-ngan-hang'] });
+      setIsEditModalOpen(false);
+      setTargetBank(null);
+    },
+  });
+
+  // Mutation xóa ngân hàng
+  const deleteMutation = useMutation({
+    mutationFn: (id) => xoaNganHang(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gv-ngan-hang'] });
+      setIsDeleteModalOpen(false);
+      setTargetBank(null);
+    },
+  });
 
   if (isLoading) return <LoadingSpinner />;
 
-  // Kết hợp data nếu sau này có data từ server (thêm vào sau) và localBanks
-  // Vì hiện tại data trả về cấu trúc câu hỏi nên tạm thời parse tạm hoặc chỉ dùng local
-  const serverBanks = data?.data ? data.data.map((c) => ({
-    id: c._id, ten: c.chuDeId?.ten || 'Chủ đề', soCauHoi: 0
-  })) : [];
-  
-  // Xóa filter tạm thời serverBanks để demo chuẩn giao diện rỗng trước
-  const displayBanks = [...localBanks];
-
+  const displayBanks = banksData?.data || [];
+  const monHocList = monHocData?.data || [];
   const hasData = displayBanks.length > 0;
 
   const handleSave = () => {
     if (!newBankName.trim()) return;
-    setLocalBanks([...localBanks, { 
-      id: Date.now(), 
-      ten: newBankName, 
-      monHoc: newBankSubject, 
-      soCauHoi: 0 
-    }]);
-    setNewBankName('');
-    setNewBankSubject('');
-    setIsModalOpen(false);
+    createMutation.mutate({
+      ten: newBankName,
+      monHocId: newBankSubject || undefined,
+    });
   };
 
   return (
@@ -112,8 +143,8 @@ const NganHangCauHoiList = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
             {displayBanks.map((bank) => (
               <div 
-                key={bank.id} 
-                onClick={() => navigate('/ngan-hang/view-ngan-hang', { state: { selectedBank: bank } })}
+                key={bank._id} 
+                onClick={() => navigate('/ngan-hang/view-ngan-hang', { state: { selectedBank: { ...bank, id: bank._id } } })}
                 style={{
                   background: '#ffffff',
                   border: '1px solid #f3f4f6',
@@ -144,7 +175,7 @@ const NganHangCauHoiList = () => {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: 'auto' }}>
                   {/* Nút sửa */}
                   <button 
-                    onClick={(e) => { e.stopPropagation(); /* Logic sửa ở đây */ }}
+                    onClick={(e) => { e.stopPropagation(); setTargetBank(bank); setEditBankName(bank.ten); setIsEditModalOpen(true); }}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       width: '30px', height: '30px', borderRadius: '0.25rem', cursor: 'pointer',
@@ -162,7 +193,7 @@ const NganHangCauHoiList = () => {
                   
                   {/* Nút xóa */}
                   <button 
-                    onClick={(e) => { e.stopPropagation(); /* Logic xóa ở đây */ }}
+                    onClick={(e) => { e.stopPropagation(); setTargetBank(bank); setIsDeleteModalOpen(true); }}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       width: '30px', height: '30px', borderRadius: '0.25rem', cursor: 'pointer',
@@ -244,11 +275,9 @@ const NganHangCauHoiList = () => {
                   onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                 >
                   <option value="">Chọn môn học</option>
-                  <option value="Toán học">Toán học</option>
-                  <option value="Vật lý">Vật lý</option>
-                  <option value="Hóa học">Hóa học</option>
-                  <option value="Sinh học">Sinh học</option>
-                  <option value="Lịch sử">Lịch sử</option>
+                  {monHocList.map((mh) => (
+                    <option key={mh._id} value={mh._id}>{mh.ten}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -283,6 +312,125 @@ const NganHangCauHoiList = () => {
                 onMouseOut={(e) => { e.currentTarget.style.background = '#2563eb'; }}
               >
                 Lưu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL SỬA NGÂN HÀNG */}
+      {isEditModalOpen && targetBank && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}
+        onClick={() => setIsEditModalOpen(false)}
+        >
+          <div style={{
+            background: '#ffffff', width: '100%', maxWidth: '440px', 
+            borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+            display: 'flex', flexDirection: 'column'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid #f3f4f6' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#1f2937' }}>
+                Cập nhật ngân hàng
+              </h3>
+            </div>
+            <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1f2937' }}>Tên ngân hàng</label>
+              <input 
+                type="text" 
+                value={editBankName}
+                onChange={(e) => setEditBankName(e.target.value)}
+                autoFocus
+                style={{
+                  width: '100%', padding: '0.625rem 0.875rem', fontSize: '1rem',
+                  border: '1px solid #1f2937', borderRadius: '0.375rem', 
+                  outline: 'none', color: '#1f2937', fontWeight: 500
+                }}
+              />
+            </div>
+            <div style={{ 
+              padding: '1.25rem', borderTop: '1px solid #f3f4f6', 
+              display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' 
+            }}>
+              <button 
+                onClick={() => setIsEditModalOpen(false)}
+                style={{
+                  padding: '0.6rem 1.75rem', fontSize: '0.95rem', fontWeight: 600,
+                  background: '#f1f5f9', color: '#4b5563', border: 'none', borderRadius: '0.375rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={() => updateMutation.mutate({ id: targetBank._id, data: { ten: editBankName } })}
+                style={{
+                  padding: '0.6rem 1.75rem', fontSize: '0.95rem', fontWeight: 600,
+                  background: '#1d4ed8', color: '#ffffff', border: 'none', borderRadius: '0.375rem',
+                  cursor: 'pointer', opacity: !editBankName.trim() ? 0.6 : 1
+                }}
+                disabled={!editBankName.trim()}
+              >
+                Cập nhật
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL XÁC NHẬN XÓA */}
+      {isDeleteModalOpen && targetBank && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}
+        onClick={() => setIsDeleteModalOpen(false)}
+        >
+          <div style={{
+            background: '#ffffff', width: '100%', maxWidth: '520px', 
+            borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+            display: 'flex', flexDirection: 'column'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <div style={{ fontSize: '1.05rem', color: '#1f2937', lineHeight: 1.6 }}>
+                Bạn có chắc chắn muốn xóa ngân hàng <span style={{ fontWeight: 700 }}>{targetBank.ten}</span>? Toàn bộ cấu trúc và câu hỏi bên trong cũng sẽ bị ảnh hưởng.
+              </div>
+            </div>
+            <div style={{ 
+              padding: '1.25rem 1.5rem', borderTop: '1px solid #f3f4f6', 
+              display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' 
+            }}>
+              <button 
+                onClick={() => setIsDeleteModalOpen(false)}
+                style={{
+                  padding: '0.625rem 1.75rem', fontSize: '0.95rem', fontWeight: 600,
+                  background: '#f1f5f9', color: '#4b5563', border: 'none', borderRadius: '0.375rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={() => deleteMutation.mutate(targetBank._id)}
+                style={{
+                  padding: '0.625rem 1.75rem', fontSize: '0.95rem', fontWeight: 600,
+                  background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '0.375rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Xác nhận
               </button>
             </div>
           </div>

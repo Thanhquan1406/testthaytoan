@@ -180,11 +180,35 @@ const importFile = async (req, res, next) => {
   }
 };
 
+/** POST /api/giao-vien/de-thi/tao-tu-ma-tran */
+const taoTuMaTran = async (req, res, next) => {
+  try {
+    const { ten, monHocId, moTa, questions } = req.body;
+    
+    // Tạo maDeThi ngẫu nhiên (ví dụ: DT + 6 số)
+    const maDeThi = 'DT' + Math.floor(100000 + Math.random() * 900000);
+
+    const payload = {
+      ten,
+      monHocId,
+      moTa,
+      maDeThi,
+      thoiGianPhut: 45, // default
+      cauHois: questions // mảng { cauHoiId, diem }
+    };
+
+    const data = await deThiService.taoDeThi(GV_ID(req), payload);
+    return created(res, data, 'Tạo đề thi từ ma trận thành công');
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   getAll, getTrash, getMonHoc, getById,
   create, update, softDelete, restore, forceDelete,
   addQuestions, removeQuestion,
   publishToClass, revokeFromClass,
   createPublicLink, revokePublicLink,
-  importFile,
+  importFile, taoTuMaTran
 };

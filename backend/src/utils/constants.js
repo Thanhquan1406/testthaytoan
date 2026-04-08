@@ -68,9 +68,18 @@ const LOAI_CAU_HOI = Object.freeze({
  * @enum {string}
  */
 const DO_KHO = Object.freeze({
-  DE: 'DE',
-  TRUNG_BINH: 'TRUNG_BINH',
-  KHO: 'KHO',
+  NB: 'NB',
+  TH: 'TH',
+  VH: 'VH',
+});
+
+/**
+ * Loại cấu trúc cây trong ngân hàng câu hỏi
+ * @enum {string}
+ */
+const LOAI_CAU_TRUC = Object.freeze({
+  KHUNG_KIEN_THUC: 'KHUNG_KIEN_THUC',
+  DON_VI_KIEN_THUC: 'DON_VI_KIEN_THUC',
 });
 
 /**
@@ -104,6 +113,7 @@ module.exports = {
   TRANG_THAI_CHAM,
   LOAI_CAU_HOI,
   DO_KHO,
+  LOAI_CAU_TRUC,
   KET_QUA_LUOT_THI,
   HANH_VI_VI_PHAM,
 };

@@ -47,3 +47,6 @@ export const importFile = (deThiId, file, chuDeId) => {
     })
     .then((r) => r.data);
 };
+
+/** Tạo đề thi từ bộ câu hỏi sinh ra từ ma trận */
+export const taoDeThiTuMaTran = (data) => api.post(`${BASE}/tao-tu-ma-tran`, data).then(r => r.data);

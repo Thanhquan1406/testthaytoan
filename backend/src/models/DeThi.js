@@ -13,6 +13,8 @@ const cauHoiTrongDeSchema = new mongoose.Schema(
     cauHoiId: { type: mongoose.Schema.Types.ObjectId, ref: 'CauHoi', required: true },
     /** Số thứ tự hiển thị (0 nếu bật trộn câu) */
     thuTu: { type: Number, default: 0 },
+    /** Điểm riêng cho câu hỏi này */
+    diem: { type: Number, default: 1 },
   },
   { _id: false }
 );

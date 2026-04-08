@@ -29,9 +29,9 @@ import GVLopHoc from './pages/giaoVien/LopHoc';
 
 // Ngân hàng câu hỏi (Shared)
 import NganHangCauHoiList from './pages/giaoVien/NganHangCauHoi';
-import ViewQuestionLibrary from './pages/giaoVien/ViewQuestionLibrary';
-import ChooseImportMode from './pages/giaoVien/ChooseImportMode';
-import EditorPage from './pages/giaoVien/EditorPage';
+import XemNganHangCauHoi from './pages/giaoVien/XemNganHangCauHoi';
+import ImportFile from './pages/giaoVien/ImportFile';
+import TrangSoanThao from './pages/giaoVien/TrangSoanThao';
 import TaoMaTranDe from './pages/giaoVien/TaoMaTranDe';
 import GVSinhVien from './pages/giaoVien/SinhVien';
 import GVKetQua from './pages/giaoVien/KetQua';
@@ -154,9 +154,9 @@ const App = () => (
       {/* Shared routes (ADMIN & GIAO_VIEN) - Ngân hàng câu hỏi */}
       <Route element={<ProtectedRoute requiredRole={["ADMIN", "GIAO_VIEN"]}><SharedDashboardLayout /></ProtectedRoute>}>
         <Route path="/ngan-hang/dashboard" element={<NganHangCauHoiList />} />
-        <Route path="/ngan-hang/view-ngan-hang" element={<ViewQuestionLibrary />} />
-        <Route path="/ngan-hang/choose-import-question-mode" element={<ChooseImportMode />} />
-        <Route path="/ngan-hang/editor" element={<EditorPage />} />
+        <Route path="/ngan-hang/view-ngan-hang" element={<XemNganHangCauHoi />} />
+        <Route path="/ngan-hang/choose-import-question-mode" element={<ImportFile />} />
+        <Route path="/ngan-hang/editor" element={<TrangSoanThao />} />
         <Route path="/ngan-hang/tao-ma-tran" element={<TaoMaTranDe />} />
       </Route>
 

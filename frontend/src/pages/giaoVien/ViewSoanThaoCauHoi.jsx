@@ -1,16 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../contexts/AuthContext';
+import { layCauTruc, luuCauHoi, layDanhSachMonHoc } from '../../services/nganHangService';
+import { taoDeThiTuMaTran } from '../../services/deThiService';
 
-const MOCK_STRUCTURES = [
-    { id: 1, name: "L1. Chương 1", type: "Khung kiến thức", parentId: undefined },
-    { id: 2, name: "L2. hhh", type: "Khung kiến thức", parentId: 1 },
-    { id: 3, name: "L1. hhh", type: "Khung kiến thức", parentId: undefined },
-    { id: 4, name: "L2. Xin chào", type: "Đơn vị kiến thức", parentId: 3 },
-    { id: 5, name: "L1. hhh(2)", type: "Khung kiến thức", parentId: undefined },
-    { id: 6, name: "L2. hh", type: "Đơn vị kiến thức", parentId: 5 }
-];
-
-const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
+const QuestionEditorView = ({ initialFileName, initialRawText, nganHangId, generatedQuestions, onClose }) => {
     const { user } = useAuthContext();
     const [rawText, setRawText] = useState(initialRawText || '');
     const [fileName, setFileName] = useState(initialFileName || '');
@@ -25,9 +19,15 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
     const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
     const [isFinalReviewPhase, setIsFinalReviewPhase] = useState(false);
     const [isClassificationStep, setIsClassificationStep] = useState(false);
+    const [isDeThiConfigStep, setIsDeThiConfigStep] = useState(false);
+    const [deThiConfig, setDeThiConfig] = useState({ ten: initialFileName || '', monHocId: '', moTa: '' });
+    const [monHocList, setMonHocList] = useState([]);
     const [selectedForClassification, setSelectedForClassification] = useState([]);
     const [showValidationErrors, setShowValidationErrors] = useState(false);
     const [parsedQuestions, setParsedQuestions] = useState([]);
+    const location = useLocation();
+    const navigate = useNavigate();
+    const fromMatrix = location.state?.fromMatrix || false;
     
     // States for Standards (YCCĐ)
     const [questionStandards, setQuestionStandards] = useState({});
@@ -37,11 +37,41 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
     const [collapsedStandardIds, setCollapsedStandardIds] = useState([]);
     const [searchStandardText, setSearchStandardText] = useState("");
     const [toastMessage, setToastMessage] = useState(null);
+    const [cauTrucList, setCauTrucList] = useState([]);
+    const [isSaving, setIsSaving] = useState(false);
+    
+    // Lazy loading questions in classification step
+    const [visibleCount, setVisibleCount] = useState(13);
+    const observerTargetRef = useRef(null);
 
     const [lineCount, setLineCount] = useState(1);
     const lineNumbersRef = useRef(null);
     const uploadRef = useRef(null);
     const hiddenFileInputRef = useRef(null);
+
+    // Load CauTruc thật từ API
+    useEffect(() => {
+        if (!nganHangId) return;
+        layCauTruc(nganHangId)
+            .then((r) => {
+                const list = Array.isArray(r) ? r : (r?.data || []);
+                setCauTrucList(list);
+            })
+            .catch(() => setCauTrucList([]));
+    }, [nganHangId]);
+
+    // Load Môn học cho form tạo đề
+    useEffect(() => {
+        if (fromMatrix) {
+            layDanhSachMonHoc().then(r => {
+                const arr = Array.isArray(r) ? r : (r?.data || []);
+                setMonHocList(arr);
+                if (arr.length > 0) {
+                    setDeThiConfig(prev => ({ ...prev, monHocId: arr[0]._id || arr[0].id }));
+                }
+            }).catch(console.error);
+        }
+    }, [fromMatrix]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -55,6 +85,23 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Intersection Observer for lazy loading
+    useEffect(() => {
+        if (!isClassificationStep) return;
+        
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && visibleCount < parsedQuestions.length) {
+                setVisibleCount(prev => Math.min(prev + 10, parsedQuestions.length));
+            }
+        }, { rootMargin: '100px' });
+
+        if (observerTargetRef.current) observer.observe(observerTargetRef.current);
+        
+        return () => {
+            if (observer) observer.disconnect();
+        };
+    }, [isClassificationStep, visibleCount, parsedQuestions.length]);
 
     const handleScroll = (e) => {
         if (lineNumbersRef.current) {
@@ -72,6 +119,11 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
     };
 
     const toggleCorrectAnswer = (q, selectedAns) => {
+        if (fromMatrix) {
+            setToastMessage('Không thể sửa đáp án khi đề thi được tự động khởi tạo từ ma trận!');
+            setTimeout(() => setToastMessage(null), 3000);
+            return;
+        }
         if (selectedAns.isCorrect) return; // already correct
         
         let newLines = rawText.split('\n');
@@ -92,19 +144,55 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
         setRawText(newLines.join('\n'));
     };
 
-    const handleFileUploadClick = () => {
+    const [uploadMode, setUploadMode] = useState('append');
+
+    const handleFileUploadClick = (mode) => {
         setIsUploadMenuOpen(false);
+        setUploadMode(mode);
         if (hiddenFileInputRef.current) {
             hiddenFileInputRef.current.click();
         }
     };
 
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
         const file = e.target.files[0];
-        if (file) {
-            alert(`Bạn đã chọn file: ${file.name}. Việc đọc word file thực tế sẽ được tích hợp sau.`);
-            // Reset input so user can choose same file again if needed
-            e.target.value = null; 
+        if (!file) return;
+
+        if (!nganHangId) {
+            alert('Không thể upload vì không xác định được Ngân hàng hiện tại!');
+            e.target.value = null;
+            return;
+        }
+
+        try {
+            setToastMessage('Đang xử lý file upload...');
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Re-use API importFile từ nganHangService đã được tối ưu để chỉ trả về list câu hỏi
+            // chứ không lưu vào DB (bước import đầu tiên)
+            const result = await import('../../services/nganHangService').then(m => m.importFile(nganHangId, formData));
+            
+            setRawText(prev => {
+                const existingCount = prev ? (prev.match(/^Câu \d+\./gm) || []).length : 0;
+                const startIndex = uploadMode === 'append' ? existingCount : 0;
+                const newText = result?.data?.cauHois?.map((q, i) => 
+                    `Câu ${startIndex + i + 1}. ${q.noiDung}\nA. ${q.luaChonA}\nB. ${q.luaChonB}\nC. ${q.luaChonC}\nD. ${q.luaChonD}\nĐáp án: ${q.dapAnDung}`
+                ).join('\n\n') || '';
+
+                if (uploadMode === 'append') {
+                    return prev ? prev + '\n\n' + newText : newText;
+                } else {
+                    if (setFileName) setFileName(file.name);
+                    return newText;
+                }
+            });
+            setToastMessage(null);
+        } catch (err) {
+            setToastMessage(err?.response?.data?.message || 'Lỗi khi phân tích nội dung file');
+            setTimeout(() => setToastMessage(null), 3000);
+        } finally {
+            e.target.value = null;
         }
     };
 
@@ -151,6 +239,144 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
         setParsedQuestions(questions);
     }, [rawText]);
 
+    // Tự động map độ khó và chủ đề cho editor nếu từ ma trận
+    useEffect(() => {
+        if (!fromMatrix || !generatedQuestions || generatedQuestions.length === 0) return;
+        if (parsedQuestions.length === 0 || cauTrucList.length === 0) return;
+
+        const DO_KHO_MAP = {
+            'NB': 'Nhận biết',
+            'TH': 'Thông hiểu',
+            'VD': 'Vận dụng',
+            'VDC': 'Vận dụng cao'
+        };
+
+        const newLevels = {};
+        const newStandards = {};
+
+        generatedQuestions.forEach((q, idx) => {
+            if (q.doKho && DO_KHO_MAP[q.doKho]) {
+                newLevels[idx] = DO_KHO_MAP[q.doKho];
+            } else if (q.doKho) {
+                newLevels[idx] = q.doKho; // Fallback
+            }
+
+            if (q.cauTrucId) {
+                const foundCt = cauTrucList.find(c => (c._id || c.id) === q.cauTrucId);
+                if (foundCt) {
+                    newStandards[idx] = foundCt;
+                }
+            }
+        });
+
+        // Chỉ ghi đè nếu state hiện tại đang rỗng (lần đầu load)
+        setQuestionLevels(prev => Object.keys(prev).length === 0 ? newLevels : prev);
+        setQuestionStandards(prev => Object.keys(prev).length === 0 ? newStandards : prev);
+
+    }, [fromMatrix, generatedQuestions, parsedQuestions.length, cauTrucList]);
+
+    if (isDeThiConfigStep) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f4f5f7', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, overflowY: 'auto' }}>
+                <div style={{ height: '60px', background: '#fff', display: 'flex', alignItems: 'center', padding: '0 1.5rem', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', position: 'sticky', top: 0, zIndex: 10 }}>
+                    <button onClick={() => setIsDeThiConfigStep(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#6b7280' }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
+                    <span style={{ marginLeft: '1rem', fontWeight: 600, color: '#1f2937' }}>Cấu hình Đề Thi</span>
+                </div>
+
+                <div style={{ width: '100%', maxWidth: '800px', margin: '2rem auto', padding: '2rem', background: '#fff', borderRadius: '0.5rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
+                    <h3 style={{ margin: '0 0 1.5rem 0', color: '#1f2937', fontWeight: 600, fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>CẤU HÌNH CHUNG</h3>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#374151', fontSize: '0.9rem' }}>Tên</label>
+                            <input 
+                                type="text" 
+                                value={deThiConfig.ten}
+                                onChange={(e) => setDeThiConfig({...deThiConfig, ten: e.target.value})}
+                                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', outline: 'none', fontSize: '0.9rem' }}
+                            />
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#374151', fontSize: '0.9rem' }}>Môn học</label>
+                            <select 
+                                value={deThiConfig.monHocId}
+                                onChange={(e) => setDeThiConfig({...deThiConfig, monHocId: e.target.value})}
+                                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', outline: 'none', fontSize: '0.9rem', background: '#fff' }}
+                            >
+                                {monHocList.map(mh => (
+                                    <option key={mh._id || mh.id} value={mh._id || mh.id}>{mh.ten}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#374151', fontSize: '0.9rem' }}>Mô tả</label>
+                            <textarea 
+                                value={deThiConfig.moTa}
+                                onChange={(e) => setDeThiConfig({...deThiConfig, moTa: e.target.value})}
+                                placeholder="Nhập mô tả..."
+                                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', outline: 'none', fontSize: '0.9rem', minHeight: '120px', resize: 'vertical' }}
+                            />
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
+                        <button 
+                            onClick={() => setIsDeThiConfigStep(false)}
+                            style={{ padding: '0.5rem 1.75rem', background: '#f3f4f6', color: '#4b5563', border: 'none', borderRadius: '0.375rem', fontWeight: 600, cursor: 'pointer' }}
+                        >
+                            Hủy
+                        </button>
+                        <button 
+                            disabled={isSaving}
+                            onClick={async () => {
+                                if (!deThiConfig.ten.trim()) {
+                                    alert("Tên đề thi không được để trống!");
+                                    return;
+                                }
+                                if (!deThiConfig.monHocId) {
+                                    alert("Vui lòng chọn môn học!");
+                                    return;
+                                }
+
+                                setIsSaving(true);
+                                try {
+                                    // Tổng hợp danh sách câu hỏi theo interface mới
+                                    // map từ generatedQuestions (array of objects chứa _id)
+                                    // và lấy scores nếu giáo viên có chia, mặc định 1
+                                    const listCauHoi = generatedQuestions.map((q, idx) => ({
+                                        cauHoiId: q._id || q.id,
+                                        diem: scores[idx] !== undefined ? parseFloat(scores[idx]) : 1
+                                    }));
+
+                                    await taoDeThiTuMaTran({
+                                        ten: deThiConfig.ten,
+                                        monHocId: deThiConfig.monHocId,
+                                        moTa: deThiConfig.moTa,
+                                        questions: listCauHoi
+                                    });
+
+                                    // Role-based redirect
+                                    const rolePrefix = user?.vaiTro === 'ADMIN' ? 'admin' : 'giao-vien';
+                                    navigate(`/${rolePrefix}/de-thi`);
+                                } catch (error) {
+                                    alert('Lỗi tạo đề thi: ' + (error.response?.data?.message || error.message));
+                                    setIsSaving(false);
+                                }
+                            }}
+                            style={{ padding: '0.5rem 1.75rem', background: '#93c5fd', color: '#1e40af', border: 'none', borderRadius: '0.375rem', fontWeight: 600, cursor: 'pointer' }}
+                        >
+                            {isSaving ? 'Đang lưu...' : 'Lưu'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (isClassificationStep) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f4f5f7', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, overflowY: 'auto' }}>
@@ -193,7 +419,8 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
                             </label>
                             
                             <button 
-                                onClick={() => {
+                                disabled={isSaving}
+                                onClick={async () => {
                                     if (selectedForClassification.length === 0) {
                                         setToastMessage("Vui lòng chọn ít nhất một câu hỏi để lưu");
                                         setTimeout(() => setToastMessage(null), 3000);
@@ -208,20 +435,55 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
                                         }
                                     }
 
-                                    alert('Đã lưu vào ngân hàng thành công!');
-                                    // Normally you would redirect here
-                                    onClose();
+                                    if (!nganHangId) {
+                                        setToastMessage('Không xác định được ngân hàng câu hỏi');
+                                        setTimeout(() => setToastMessage(null), 3000);
+                                        return;
+                                    }
+
+                                    // Chỉ lưu những câu được chọn
+                                    const questionsToSave = sortedSelected.map(idx => {
+                                        const q = parsedQuestions[idx];
+                                        const correctAns = q.answers.find(a => a.isCorrect);
+                                        const letters = ['A','B','C','D','E','F'];
+                                        const standard = questionStandards[idx];
+                                        const levelMap = { 'Nhận biết': 'NB', 'Thông hiểu': 'TH', 'Vận dụng': 'VH' };
+                                        return {
+                                            noiDung: q.title.includes('.') ? q.title.substring(q.title.indexOf('.') + 1).trim() : q.title,
+                                            loaiCauHoi: 'TRAC_NGHIEM',
+                                            doKho: levelMap[questionLevels[idx]] || 'TH',
+                                            dapAnDung: correctAns ? letters[q.answers.indexOf(correctAns)] : '',
+                                            luaChonA: q.answers[0]?.text || '',
+                                            luaChonB: q.answers[1]?.text || '',
+                                            luaChonC: q.answers[2]?.text || '',
+                                            luaChonD: q.answers[3]?.text || '',
+                                            cauTrucId: standard?._id || standard?.id || null,
+                                        };
+                                    });
+
+                                    try {
+                                        setIsSaving(true);
+                                        await luuCauHoi(nganHangId, questionsToSave);
+                                        setToastMessage(null);
+                                        alert(`Đã lưu ${questionsToSave.length} câu hỏi vào ngân hàng thành công!`);
+                                        onClose();
+                                    } catch (err) {
+                                        setToastMessage(err?.response?.data?.message || 'Lưu thất bại, vui lòng thử lại');
+                                        setTimeout(() => setToastMessage(null), 4000);
+                                    } finally {
+                                        setIsSaving(false);
+                                    }
                                 }}
-                                style={{ padding: '0.625rem 1.25rem', background: '#1e3a8a', color: '#fff', border: 'none', borderRadius: '0.375rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
+                                style={{ padding: '0.625rem 1.25rem', background: isSaving ? '#93c5fd' : '#1e3a8a', color: '#fff', border: 'none', borderRadius: '0.375rem', fontWeight: 600, cursor: isSaving ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
                             >
-                                Lưu vào ngân hàng
+                                {isSaving ? 'Đang lưu...' : 'Lưu vào ngân hàng'}
                             </button>
                         </div>
                     </div>
 
                     {/* Câu hỏi list */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '3rem' }}>
-                        {parsedQuestions.map((q, idx) => {
+                        {parsedQuestions.slice(0, visibleCount).map((q, idx) => {
                             const mapLevelToAbbr = {
                                 'Nhận biết': 'NB',
                                 'Thông hiểu': 'TH',
@@ -345,7 +607,7 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
                                             </>
                                         ) : (
                                             <>
-                                                <span style={{ color: '#4b5563', fontSize: '1rem', fontWeight: 500 }}>{questionStandards[idx].name}</span>
+                                                <span style={{ color: '#4b5563', fontSize: '1rem', fontWeight: 500 }}>{questionStandards[idx].ten || questionStandards[idx].name}</span>
                                                 <span 
                                                     onClick={() => { setEditingStandardIdx(idx); setIsStandardModalOpen(true); }}
                                                     style={{ color: '#3b82f6', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: 500 }}
@@ -385,6 +647,15 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
                                 </div>
                             );
                         })}
+                        {visibleCount < parsedQuestions.length && (
+                            <div ref={observerTargetRef} style={{ padding: '2rem', textAlign: 'center', color: '#6b7280', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                                <div className="spinner" style={{ width: '20px', height: '20px', border: '3px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                                Đang tải thêm câu hỏi...
+                            </div>
+                        )}
+                        <style>{`
+                            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                        `}</style>
                     </div>
                 </div>
 
@@ -406,41 +677,53 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                                 </div>
                                 
-                                {/* Tree View */}
+                                {/* Tree View - CauTruc thật từ API */}
                                 <div style={{ flex: 1, overflowY: 'auto', borderTop: '1px solid #f3f4f6', paddingTop: '1rem', marginTop: '0.5rem' }}>
-                                    {(() => {
-                                        const renderTree = (parentId = undefined, depth = 0) => {
-                                            const children = MOCK_STRUCTURES.filter(s => s.parentId === parentId);
+                                    {cauTrucList.length === 0 ? (
+                                        <div style={{ color: '#9ca3af', fontSize: '0.9rem', textAlign: 'center', padding: '2rem' }}>
+                                            {nganHangId ? 'Ngân hàng này chưa có cấu trúc nào' : 'Không xác định được ngân hàng'}
+                                        </div>
+                                    ) : (() => {
+                                        const renderTree = (parentId = null, depth = 0) => {
+                                            const children = cauTrucList.filter(s => {
+                                                const sParent = s.parentId?._id || s.parentId || null;
+                                                return sParent === parentId;
+                                            });
                                             if (children.length === 0) return null;
-                                            
-                                            return children.map((structure, index) => {
-                                                const hasChildren = MOCK_STRUCTURES.some(s => s.parentId === structure.id);
-                                                const isCollapsed = collapsedStandardIds.includes(structure.id);
-                                                const isDonViKienThuc = structure.type === "Đơn vị kiến thức";
-                                                
-                                                if (searchStandardText && !structure.name.toLowerCase().includes(searchStandardText.toLowerCase())) {
+
+                                            return children.map((structure) => {
+                                                const structureId = structure._id || structure.id;
+                                                const hasChildren = cauTrucList.some(s => {
+                                                    const sParent = s.parentId?._id || s.parentId || null;
+                                                    return sParent === structureId;
+                                                });
+                                                const isCollapsed = collapsedStandardIds.includes(structureId);
+                                                // Đơn vị kiến thức = node lá (không có con) → có thể chọn
+                                                const isSelectable = !hasChildren;
+
+                                                if (searchStandardText && !structure.ten.toLowerCase().includes(searchStandardText.toLowerCase())) {
                                                     if (!hasChildren) return null;
                                                 }
 
                                                 return (
-                                                    <div key={structure.id}>
+                                                    <div key={structureId}>
                                                         <div 
                                                             onClick={() => {
-                                                                if (isDonViKienThuc) {
+                                                                if (isSelectable) {
                                                                     setQuestionStandards({...questionStandards, [editingStandardIdx]: structure});
                                                                     setIsStandardModalOpen(false);
-                                                                } else if (hasChildren) {
-                                                                    setCollapsedStandardIds(prev => prev.includes(structure.id) ? prev.filter(x => x !== structure.id) : [...prev, structure.id]);
+                                                                } else {
+                                                                    setCollapsedStandardIds(prev => prev.includes(structureId) ? prev.filter(x => x !== structureId) : [...prev, structureId]);
                                                                 }
                                                             }}
                                                             style={{ 
                                                                 display: 'flex', alignItems: 'center', gap: '0.5rem',
                                                                 padding: `0.5rem 0.5rem 0.5rem ${depth * 1.5 + 0.5}rem`,
-                                                                cursor: isDonViKienThuc || hasChildren ? 'pointer' : 'default',
-                                                                color: isDonViKienThuc ? '#2563eb' : '#374151',
+                                                                cursor: isSelectable || hasChildren ? 'pointer' : 'default',
+                                                                color: isSelectable ? '#2563eb' : '#374151',
                                                                 background: 'transparent', borderRadius: '0.25rem'
                                                             }}
-                                                            onMouseEnter={(e) => { if(isDonViKienThuc) e.currentTarget.style.background = '#eff6ff'; else if(hasChildren) e.currentTarget.style.background = '#f3f4f6'; }}
+                                                            onMouseEnter={(e) => { if(isSelectable) e.currentTarget.style.background = '#eff6ff'; else if(hasChildren) e.currentTarget.style.background = '#f3f4f6'; }}
                                                             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                                         >
                                                             {hasChildren ? (
@@ -452,10 +735,10 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
                                                                     <div style={{ width: '3px', height: '3px', background: '#9ca3af', borderRadius: '50%' }}></div>
                                                                 </div>
                                                             )}
-                                                            <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{structure.name}</span>
+                                                            <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{structure.ten}</span>
                                                         </div>
                                                         
-                                                        {(!isCollapsed && hasChildren) && renderTree(structure.id, depth + 1)}
+                                                        {(!isCollapsed && hasChildren) && renderTree(structureId, depth + 1)}
                                                     </div>
                                                 );
                                             });
@@ -545,7 +828,11 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
                                     onClick={() => { 
                                         setIsInfoModalOpen(false); 
                                         setIsFinalReviewPhase(false); 
-                                        setIsClassificationStep(true);
+                                        if (fromMatrix) {
+                                            setIsDeThiConfigStep(true);
+                                        } else {
+                                            setIsClassificationStep(true);
+                                        }
                                     }} 
                                     style={{ padding: '0.5rem 1.75rem', background: '#2563eb', border: 'none', borderRadius: '0.375rem', fontWeight: 600, color: '#fff', cursor: 'pointer' }}
                                 >
@@ -639,34 +926,38 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
                 </div>
                 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginLeft: 'auto', fontWeight: 500 }}>
-                    <div ref={uploadRef} style={{ position: 'relative' }}>
-                        <span 
-                            onClick={() => setIsUploadMenuOpen(!isUploadMenuOpen)}
-                            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.35rem 0.5rem', background: isUploadMenuOpen ? '#f3f4f6' : 'transparent', borderRadius: '0.25rem', transition: 'background 0.2s', marginLeft: '-0.5rem' }}
-                        >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> 
-                            Upload
-                        </span>
-                        
-                        {isUploadMenuOpen && (
-                            <div style={{ position: 'absolute', top: '100%', left: '-0.5rem', marginTop: '0.25rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', width: '220px', zIndex: 50, padding: '0.5rem 0', overflow: 'hidden' }}>
-                                <div onClick={handleFileUploadClick} style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', color: '#1f2937', fontSize: '0.9rem', fontWeight: 400 }} onMouseEnter={(e) => { e.target.style.background = '#f9fafb'; e.target.style.fontWeight = '500'; }} onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.fontWeight = '400'; }}>
-                                    Upload file chèn vào đề thi
-                                </div>
-                                <div onClick={handleFileUploadClick} style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', color: '#1f2937', fontSize: '0.9rem', fontWeight: 400 }} onMouseEnter={(e) => { e.target.style.background = '#f9fafb'; e.target.style.fontWeight = '500'; }} onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.fontWeight = '400'; }}>
-                                    Upload file để tạo đề mới
-                                </div>
+                    {!fromMatrix && (
+                        <>
+                            <div ref={uploadRef} style={{ position: 'relative' }}>
+                                <span 
+                                    onClick={() => setIsUploadMenuOpen(!isUploadMenuOpen)}
+                                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.35rem 0.5rem', background: isUploadMenuOpen ? '#f3f4f6' : 'transparent', borderRadius: '0.25rem', transition: 'background 0.2s', marginLeft: '-0.5rem' }}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> 
+                                    Upload
+                                </span>
+                                
+                                {isUploadMenuOpen && (
+                                    <div style={{ position: 'absolute', top: '100%', left: '-0.5rem', marginTop: '0.25rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '0.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', width: '220px', zIndex: 50, padding: '0.5rem 0', overflow: 'hidden' }}>
+                                        <div onClick={() => handleFileUploadClick('append')} style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', color: '#1f2937', fontSize: '0.9rem', fontWeight: 400 }} onMouseEnter={(e) => { e.target.style.background = '#f9fafb'; e.target.style.fontWeight = '500'; }} onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.fontWeight = '400'; }}>
+                                            Upload file chèn vào đề thi
+                                        </div>
+                                        <div onClick={() => handleFileUploadClick('replace')} style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', color: '#1f2937', fontSize: '0.9rem', fontWeight: 400 }} onMouseEnter={(e) => { e.target.style.background = '#f9fafb'; e.target.style.fontWeight = '500'; }} onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.fontWeight = '400'; }}>
+                                            Upload file để tạo đề mới
+                                        </div>
+                                    </div>
+                                )}
+                                <input 
+                                    type="file" 
+                                    ref={hiddenFileInputRef} 
+                                    style={{ display: 'none' }} 
+                                    onChange={handleFileChange}
+                                    accept=".doc,.docx,.txt" 
+                                />
                             </div>
-                        )}
-                        <input 
-                            type="file" 
-                            ref={hiddenFileInputRef} 
-                            style={{ display: 'none' }} 
-                            onChange={handleFileChange}
-                            accept=".doc,.docx,.txt" 
-                        />
-                    </div>
-                    <span style={{ cursor: 'pointer' }}>+ Chọn từ ngân hàng cá nhân</span>
+                            <span style={{ cursor: 'pointer' }}>+ Chọn từ ngân hàng cá nhân</span>
+                        </>
+                    )}
                     <span style={{ cursor: 'pointer' }}>⋮</span>
                 </div>
             </div>
@@ -813,17 +1104,22 @@ const QuestionEditorView = ({ initialFileName, initialRawText, onClose }) => {
                             ))}
                         </div>
                         {/* Text Area */}
-                        <textarea 
-                            value={rawText} 
-                            onChange={(e) => setRawText(e.target.value)}
-                            onScroll={handleScroll}
-                            style={{ 
-                                flex: 1, border: 'none', outline: 'none', padding: '1rem', 
-                                fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: 1.6, 
-                                color: '#b91c1c', resize: 'none', whiteSpace: 'pre', overflowX: 'auto', overflowY: 'auto'
-                            }} 
-                            spellCheck={false}
-                        />
+                        <div style={{ flex: 1, position: 'relative', display: 'flex' }}>
+                            <textarea 
+                                value={rawText} 
+                                onChange={(e) => setRawText(e.target.value)}
+                                onScroll={handleScroll}
+                                readOnly={fromMatrix}
+                                title={fromMatrix ? "Cannot edit in read-only editor" : ""}
+                                style={{ 
+                                    flex: 1, border: 'none', outline: 'none', padding: '1rem', 
+                                    fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: 1.6, 
+                                    color: '#b91c1c', resize: 'none', whiteSpace: 'pre', overflowX: 'auto', overflowY: 'auto',
+                                    background: fromMatrix ? '#f3f4f6' : 'transparent', cursor: fromMatrix ? 'not-allowed' : 'text'
+                                }} 
+                                spellCheck={false}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

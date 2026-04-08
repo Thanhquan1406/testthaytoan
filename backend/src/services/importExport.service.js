@@ -104,7 +104,7 @@ function parseCauHoiFromText(rawText) {
     results.push({
       noiDung,
       loaiCauHoi: 'TRAC_NGHIEM',
-      doKho: 'TRUNG_BINH',
+      doKho: 'TH',
       dapAnDung,
       luaChonA,
       luaChonB,

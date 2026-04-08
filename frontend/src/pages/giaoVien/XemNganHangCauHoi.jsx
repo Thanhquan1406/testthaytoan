@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { layCauTruc, taoCauTruc, capNhatCauTruc, xoaCauTruc } from '../../services/nganHangService';
 
-const ViewQuestionLibrary = () => {
+const XemNganHangCauHoi = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   // Safe extraction of bank from history state
   const selectedBank = location.state?.selectedBank;
 
@@ -12,17 +15,74 @@ const ViewQuestionLibrary = () => {
   const [structureType, setStructureType] = useState('Khung kiến thức');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchType, setSearchType] = useState('');
-  const [structures, setStructures] = useState([]);
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [activeParentIdForModal, setActiveParentIdForModal] = useState(undefined);
   const [collapsedNodeIds, setCollapsedNodeIds] = useState([]);
   const [contextMenu, setContextMenu] = useState(null);
+
+  // States for Edit, Delete
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [targetStructure, setTargetStructure] = useState(null);
+  const [editStructureName, setEditStructureName] = useState('');
 
   // If directly navigated without bank data, redirect back to list
   if (!selectedBank) {
       navigate('/ngan-hang/dashboard', { replace: true });
       return null;
   }
+
+  const nganHangId = selectedBank._id || selectedBank.id;
+
+  // Fetch cấu trúc từ API
+  const { data: cauTrucData } = useQuery({
+    queryKey: ['gv-cau-truc', nganHangId],
+    queryFn: () => layCauTruc(nganHangId),
+    enabled: !!nganHangId,
+  });
+
+  const structures = (cauTrucData?.data || []).map(s => ({
+    id: s._id,
+    name: s.ten,
+    type: s.loai === 'DON_VI_KIEN_THUC' ? 'Đơn vị kiến thức' : 'Khung kiến thức',
+    questionCount: s.soCauHoi || 0,
+    nb: s.soCauHoiNB || 0,
+    th: s.soCauHoiTH || 0,
+    vh: s.soCauHoiVH || 0,
+    parentId: s.parentId || undefined,
+  }));
+
+  // Mutation tạo cấu trúc
+  const createMutation = useMutation({
+    mutationFn: (data) => taoCauTruc(nganHangId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gv-cau-truc', nganHangId] });
+      setStructureName('');
+      setStructureType('Khung kiến thức');
+      setActiveParentIdForModal(undefined);
+      setIsStructureModalOpen(false);
+    },
+  });
+
+  // Mutation cập nhật cấu trúc
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => capNhatCauTruc(nganHangId, id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gv-cau-truc', nganHangId] });
+      setIsEditModalOpen(false);
+      setTargetStructure(null);
+    },
+  });
+
+  // Mutation xóa cấu trúc
+  const deleteMutation = useMutation({
+    mutationFn: (id) => xoaCauTruc(nganHangId, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gv-cau-truc', nganHangId] });
+      setIsDeleteModalOpen(false);
+      setTargetStructure(null);
+    },
+  });
 
   const handleContextMenu = (e, structure) => {
     e.preventDefault();
@@ -48,33 +108,25 @@ const ViewQuestionLibrary = () => {
 
   const handleSaveStructure = () => {
     if (!structureName.trim()) return;
-
-    const newId = Date.now();
-    let updatedStructures = [...structures];
-
-    if (activeParentIdForModal) {
-      const parentIndex = updatedStructures.findIndex(s => s.id === activeParentIdForModal);
-      if (parentIndex !== -1 && updatedStructures[parentIndex].type === 'Đơn vị kiến thức') {
-        updatedStructures[parentIndex] = {
-          ...updatedStructures[parentIndex],
-          type: 'Khung kiến thức'
-        };
-      }
-    }
-
-    updatedStructures.push({
-      id: newId,
-      name: structureName,
-      type: structureType,
-      questionCount: 0,
-      parentId: activeParentIdForModal
+    const loai = structureType === 'Đơn vị kiến thức' ? 'DON_VI_KIEN_THUC' : 'KHUNG_KIEN_THUC';
+    createMutation.mutate({
+      ten: structureName.trim(),
+      loai,
+      parentId: activeParentIdForModal || null,
     });
+  };
 
-    setStructures(updatedStructures);
-    setStructureName('');
-    setStructureType('Khung kiến thức');
-    setActiveParentIdForModal(undefined);
-    setIsStructureModalOpen(false);
+  const handleUpdateStructure = () => {
+    if (!editStructureName.trim() || !targetStructure) return;
+    updateMutation.mutate({
+      id: targetStructure.id,
+      data: { ten: editStructureName.trim() },
+    });
+  };
+
+  const handleDeleteStructure = () => {
+    if (!targetStructure) return;
+    deleteMutation.mutate(targetStructure.id);
   };
 
   const renderStructureTree = (parentId = undefined, depth = 0) => {
@@ -115,7 +167,10 @@ const ViewQuestionLibrary = () => {
               )
             )}
             <span style={{ fontSize: '0.95rem', fontWeight: 500, color: '#374151' }}>{structure.name}</span>
-            <span style={{ fontSize: '0.85rem', color: '#9ca3af' }}>({structure.questionCount} Câu hỏi)</span>
+            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+              ({structure.questionCount} Câu hỏi
+              {structure.questionCount > 0 ? `: ${structure.nb} NB - ${structure.th} TH - ${structure.vh} VD` : ''})
+            </span>
           </div>
           
           <div style={{ position: 'relative' }}>
@@ -149,11 +204,26 @@ const ViewQuestionLibrary = () => {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     Thêm cấu trúc con
                   </button>
-                  <button style={{ whiteSpace: 'nowrap', width: '100%', padding: '0.625rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.9rem', color: '#374151', textAlign: 'left', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
+                  <button 
+                    onClick={() => {
+                      setTargetStructure(structure);
+                      setEditStructureName(structure.name);
+                      setIsEditModalOpen(true);
+                      setActiveMenuId(null);
+                    }}
+                    style={{ whiteSpace: 'nowrap', width: '100%', padding: '0.625rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.9rem', color: '#374151', textAlign: 'left', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                     Sửa
                   </button>
-                  <button style={{ whiteSpace: 'nowrap', width: '100%', padding: '0.625rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.9rem', color: '#ef4444', textAlign: 'left', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#fef2f2'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
+                  <button 
+                    onClick={() => {
+                      setTargetStructure(structure);
+                      setIsDeleteModalOpen(true);
+                      setActiveMenuId(null);
+                    }}
+                    style={{ whiteSpace: 'nowrap', width: '100%', padding: '0.625rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '0.9rem', color: '#ef4444', textAlign: 'left', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#fef2f2'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     Xóa
                   </button>
@@ -191,7 +261,17 @@ const ViewQuestionLibrary = () => {
       {/* Tiêu đề & Ô tìm kiếm (nằm ngoài card trắng) */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#111827', margin: 0 }}>
-          {selectedBank.ten} <span style={{ color: '#9ca3af', fontSize: '0.875rem', fontWeight: 500 }}>({selectedBank.soCauHoi} Câu hỏi)</span>
+          {selectedBank.ten} <span style={{ color: '#9ca3af', fontSize: '0.875rem', fontWeight: 500 }}>
+            {(() => {
+              const rootStructures = structures.filter(s => !s.parentId);
+              const totalQ = rootStructures.reduce((acc, s) => acc + s.questionCount, 0);
+              const totalNb = rootStructures.reduce((acc, s) => acc + s.nb, 0);
+              const totalTh = rootStructures.reduce((acc, s) => acc + s.th, 0);
+              const totalVh = rootStructures.reduce((acc, s) => acc + s.vh, 0);
+              
+              return `(${totalQ} Câu hỏi${totalQ > 0 ? ` : ${totalNb} NB - ${totalTh} TH - ${totalVh} VD` : ''})`;
+            })()}
+          </span>
         </h2>
         
         <div style={{ position: 'relative' }}>
@@ -489,8 +569,139 @@ const ViewQuestionLibrary = () => {
           </div>
         </div>
       )}
+
+      {/* MODAL CẬP NHẬT CẤU TRÚC */}
+      {isEditModalOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}
+        onClick={() => setIsEditModalOpen(false)}
+        >
+          <div style={{
+            background: '#ffffff', width: '100%', maxWidth: '440px', 
+            borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+            display: 'flex', flexDirection: 'column'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid #f3f4f6' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: '#1f2937' }}>
+                Cập nhật cấu trúc
+              </h3>
+            </div>
+            
+            {/* Body */}
+            <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', minHeight: '100px' }}>
+              <label style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1f2937' }}>Tên cấu trúc</label>
+              <input 
+                type="text" 
+                value={editStructureName}
+                onChange={(e) => setEditStructureName(e.target.value)}
+                autoFocus
+                style={{
+                  width: '100%', padding: '0.625rem 0.875rem', fontSize: '1rem',
+                  border: '1px solid #1f2937', borderRadius: '0.375rem', 
+                  outline: 'none', color: '#1f2937', fontWeight: 500
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#1f2937'}
+              />
+            </div>
+
+            {/* Footer */}
+            <div style={{ 
+              padding: '1.25rem', borderTop: '1px solid #f3f4f6', 
+              display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' 
+            }}>
+              <button 
+                onClick={() => setIsEditModalOpen(false)}
+                style={{
+                  padding: '0.6rem 1.75rem', fontSize: '0.95rem', fontWeight: 600,
+                  background: '#f1f5f9', color: '#4b5563', border: 'none', borderRadius: '0.375rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={handleUpdateStructure}
+                style={{
+                  padding: '0.6rem 1.75rem', fontSize: '0.95rem', fontWeight: 600,
+                  background: '#1d4ed8', color: '#ffffff', border: 'none', borderRadius: '0.375rem',
+                  cursor: 'pointer', opacity: !editStructureName.trim() ? 0.6 : 1
+                }}
+                disabled={!editStructureName.trim()}
+              >
+                Cập nhật
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL XÁC NHẬN XÓA */}
+      {isDeleteModalOpen && targetStructure && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}
+        onClick={() => setIsDeleteModalOpen(false)}
+        >
+          <div style={{
+            background: '#ffffff', width: '100%', maxWidth: '520px', 
+            borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+            display: 'flex', flexDirection: 'column'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            {/* Body */}
+            <div style={{ padding: '1.5rem 1.5rem 1.5rem 1.25rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '0.1rem' }}>
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+              <div style={{ fontSize: '1.05rem', color: '#1f2937', lineHeight: 1.6 }}>
+                Bạn có chắc chắn muốn xóa khung kiến thức <span style={{ fontWeight: 700 }}>{targetStructure.name}</span>. Khi nhấn 
+                <span style={{ fontWeight: 700 }}> "Xác nhận"</span> toàn bộ nội dung trong khung kiến thức này cũng sẽ bị xóa?
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ 
+              padding: '1.25rem 1.5rem', borderTop: '1px solid #f3f4f6', 
+              display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' 
+            }}>
+              <button 
+                onClick={() => setIsDeleteModalOpen(false)}
+                style={{
+                  padding: '0.625rem 1.75rem', fontSize: '0.95rem', fontWeight: 600,
+                  background: '#f1f5f9', color: '#4b5563', border: 'none', borderRadius: '0.375rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={handleDeleteStructure}
+                style={{
+                  padding: '0.625rem 1.75rem', fontSize: '0.95rem', fontWeight: 600,
+                  background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '0.375rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default ViewQuestionLibrary;
+export default XemNganHangCauHoi;

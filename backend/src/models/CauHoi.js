@@ -11,7 +11,7 @@ const cauHoiSchema = new mongoose.Schema(
     chuDeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ChuDe',
-      required: [true, 'Câu hỏi phải thuộc một chủ đề'],
+      default: null,
     },
     noiDung: {
       type: String,
@@ -28,7 +28,7 @@ const cauHoiSchema = new mongoose.Schema(
       type: String,
       enum: Object.values(DO_KHO),
       required: true,
-      default: DO_KHO.TRUNG_BINH,
+      default: DO_KHO.TH,
     },
     dapAnDung: {
       type: String,
@@ -40,6 +40,18 @@ const cauHoiSchema = new mongoose.Schema(
     luaChonC: { type: String, trim: true },
     luaChonD: { type: String, trim: true },
 
+    /** Ngân hàng câu hỏi chứa câu hỏi này (optional, song song với chuDeId) */
+    nganHangId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'NganHang',
+      default: null,
+    },
+    /** Cấu trúc (node trong cây) chứa câu hỏi này (optional) */
+    cauTrucId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'CauTruc',
+      default: null,
+    },
     /** Giáo viên tạo câu hỏi */
     nguoiDungId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -55,6 +67,7 @@ const cauHoiSchema = new mongoose.Schema(
 /** Index để lọc nhanh theo chủ đề và độ khó */
 cauHoiSchema.index({ chuDeId: 1, doKho: 1 });
 cauHoiSchema.index({ nguoiDungId: 1 });
+cauHoiSchema.index({ nganHangId: 1, cauTrucId: 1 });
 
 const CauHoi = mongoose.model('CauHoi', cauHoiSchema);
 

@@ -127,6 +127,77 @@ const layDanhSachMonHoc = async () => {
   return MonHoc.find({}).sort({ ten: 1 }).lean();
 };
 
+// ─── NGÂN HÀNG CÂU HỎI ──────────────────────────────────────────────────────
+
+const NganHang = require('../models/NganHang');
+
+/**
+ * Import mảng câu hỏi đã parse vào ngân hàng (bulk insert)
+ * @param {string} giaoVienId
+ * @param {string} nganHangId
+ * @param {string|null} cauTrucId
+ * @param {object[]} questions - Mảng { noiDung, loaiCauHoi, doKho, dapAnDung, luaChonA-D }
+ * @returns {Promise<object[]>}
+ */
+const importCauHoi = async (giaoVienId, nganHangId, cauTrucId, questions) => {
+  if (!questions || !questions.length) {
+    throw Object.assign(new Error('Không có câu hỏi nào để import'), { statusCode: 400 });
+  }
+
+  const docs = questions.map((q) => ({
+    noiDung: q.noiDung,
+    loaiCauHoi: q.loaiCauHoi || LOAI_CAU_HOI.TRAC_NGHIEM,
+    doKho: q.doKho || DO_KHO.TH,
+    dapAnDung: q.dapAnDung || '',
+    luaChonA: q.luaChonA || '',
+    luaChonB: q.luaChonB || '',
+    luaChonC: q.luaChonC || '',
+    luaChonD: q.luaChonD || '',
+    nganHangId,
+    cauTrucId: q.cauTrucId || cauTrucId || null,
+    nguoiDungId: giaoVienId,
+  }));
+
+  const inserted = await CauHoi.insertMany(docs);
+
+  // Cập nhật cache soCauHoi trên ngân hàng
+  const totalCount = await CauHoi.countDocuments({ nganHangId });
+  await NganHang.findByIdAndUpdate(nganHangId, { soCauHoi: totalCount });
+
+  return inserted;
+};
+
+/**
+ * Lấy câu hỏi theo ngân hàng (có filter, phân trang)
+ * @param {string} nganHangId
+ * @param {string} giaoVienId
+ * @param {object} query
+ * @returns {Promise<{data: object[], meta: object}>}
+ */
+const layTheoNganHang = async (nganHangId, giaoVienId, query = {}) => {
+  const { page, limit, skip } = getPaginationParams(query);
+  const { cauTrucId, loaiCauHoi, doKho, search } = query;
+
+  const filter = { nganHangId, nguoiDungId: giaoVienId };
+
+  if (cauTrucId) filter.cauTrucId = cauTrucId;
+  if (loaiCauHoi && Object.values(LOAI_CAU_HOI).includes(loaiCauHoi)) filter.loaiCauHoi = loaiCauHoi;
+  if (doKho && Object.values(DO_KHO).includes(doKho)) filter.doKho = doKho;
+  if (search) filter.noiDung = { $regex: search, $options: 'i' };
+
+  const [data, total] = await Promise.all([
+    CauHoi.find(filter)
+      .populate('cauTrucId', 'ten loai')
+      .skip(skip)
+      .limit(limit)
+      .sort({ thoiGianTao: -1 })
+      .lean(),
+    CauHoi.countDocuments(filter),
+  ]);
+
+  return { data, meta: buildPaginationMeta({ page, limit, total }) };
+};
+
 module.exports = {
   layDanhSach,
   taoCauHoi,
@@ -135,4 +206,7 @@ module.exports = {
   taoChuDe,
   layDanhSachChuDe,
   layDanhSachMonHoc,
+  importCauHoi,
+  layTheoNganHang,
 };
+

@@ -1,21 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-
-const MOCK_STRUCTURES = [
-    { id: 1, name: "Chương 1", type: "Khung kiến thức", parentId: undefined },
-    { id: 2, name: "hhh", type: "Khung kiến thức", parentId: 1 },
-    { id: 3, name: "hhh", type: "Khung kiến thức", parentId: undefined },
-    { id: 4, name: "Xin chào", type: "Đơn vị kiến thức", parentId: 3 },
-    { id: 5, name: "hhh(2)", type: "Khung kiến thức", parentId: undefined },
-    { id: 6, name: "hh", type: "Đơn vị kiến thức", parentId: 5 }
-];
+import * as XLSX from 'xlsx';
+import { layCauTruc, taoDeTuMaTran } from '../../services/nganHangService';
 
 const TaoMaTranDe = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const selectedBank = location.state?.selectedBank;
   const [matrixName, setMatrixName] = useState('');
-  const [expandedNodes, setExpandedNodes] = useState([1, 3, 5]);
+  const [structures, setStructures] = useState([]);
+  const [expandedNodes, setExpandedNodes] = useState([]);
   const [matrixRows, setMatrixRows] = useState([]);
   const [activeTooltip, setActiveTooltip] = useState(null);
   
@@ -23,11 +17,27 @@ const TaoMaTranDe = () => {
   const [matrixData, setMatrixData] = useState({});
   // Lưu trữ dữ liệu ô % tổng điểm: { [rowId]: string }
   const [percentData, setPercentData] = useState({});
+  const [showNameError, setShowNameError] = useState(false);
+
+  useEffect(() => {
+     if (selectedBank?._id) {
+         layCauTruc(selectedBank._id).then(res => {
+             const list = Array.isArray(res) ? res : (res?.data || []);
+             setStructures(list);
+             // Tự động mở tất cả các node bằng cách lấy mảng id
+             setExpandedNodes(list.map(s => s._id || s.id));
+         });
+     }
+  }, [selectedBank?._id]);
 
   const handleInputChange = (rowId, colIndex, value) => {
     let num = parseInt(value, 10);
     if (value === "") num = "";
     if (isNaN(num) && value !== "") return; // chỉ cho nhập số
+    
+    // Validate with available constraint
+    const available = getAvailableCount(rowId, colIndex);
+    if (num > available) num = available;
 
     setMatrixData(prev => ({
       ...prev,
@@ -74,9 +84,16 @@ const TaoMaTranDe = () => {
     return sum;
   };
 
-  // Mock function to simulate available questions
-  const getMockAvailableCount = (rowId, colIndex) => {
-    return (rowId + colIndex) % 3 === 0 ? 0 : ((rowId * 7 + colIndex * 3) % 15) + 1;
+  const getAvailableCount = (rowId, colIndex) => {
+    const row = matrixRows.find(r => r.id === rowId);
+    if (!row) return 0;
+    
+    if (colIndex === 0) return row.nb || 0;
+    if (colIndex === 1) return row.th || 0;
+    if (colIndex === 2) return row.vh || 0;
+    
+    // Chưa hỗ trợ đếm Đúng Sai (3,4,5) vì backend hiện chỉ lưu form TRAC_NGHIEM
+    return 0;
   };
 
   const toggleNode = (e, id) => {
@@ -85,27 +102,38 @@ const TaoMaTranDe = () => {
   };
 
   const handleAddRow = (node) => {
-    if (matrixRows.some(row => row.id === node.id)) return;
+    const nodeId = node._id || node.id;
+    if (matrixRows.some(row => row.id === nodeId)) return;
     
-    let parentObj = MOCK_STRUCTURES.find(s => s.id === node.parentId);
-    let parentName = parentObj ? parentObj.name : "";
+    const nodeParentId = node.parentId?._id || node.parentId || undefined;
+    let parentObj = structures.find(s => (s._id || s.id) === nodeParentId);
+    let parentName = parentObj ? parentObj.ten : "";
+
+    const hasChildren = structures.some(s => {
+        const pId = s.parentId?._id || s.parentId || undefined;
+        return pId === nodeId;
+    });
+    const type = hasChildren ? "Khung kiến thức" : "Đơn vị kiến thức";
 
     let noiDung = "";
     let yeuCau = "";
     
-    if (node.type === "Đơn vị kiến thức") {
+    if (type === "Đơn vị kiến thức") {
         noiDung = parentName;
-        yeuCau = node.name;
+        yeuCau = node.ten;
     } else {
-        noiDung = node.name;
+        noiDung = node.ten;
         yeuCau = "";
     }
 
     setMatrixRows([...matrixRows, {
-        id: node.id,
+        id: nodeId,
         noiDung,
         yeuCau,
-        nodeType: node.type
+        nodeType: type,
+        nb: node.soCauHoiNB || 0,
+        th: node.soCauHoiTH || 0,
+        vh: node.soCauHoiVH || 0
     }]);
   };
 
@@ -114,17 +142,25 @@ const TaoMaTranDe = () => {
   };
 
   const renderTree = (parentId = undefined, depth = 0) => {
-    const nodes = MOCK_STRUCTURES.filter(s => s.parentId === parentId);
+    const nodes = structures.filter(s => {
+        const pId = s.parentId?._id || s.parentId || undefined;
+        return pId === parentId;
+    });
+    
     if (!nodes.length) return null;
 
     return nodes.map(node => {
-      const hasChildren = MOCK_STRUCTURES.some(s => s.parentId === node.id);
-      const isExpanded = expandedNodes.includes(node.id);
+      const nodeId = node._id || node.id;
+      const hasChildren = structures.some(s => {
+          const pId = s.parentId?._id || s.parentId || undefined;
+          return pId === nodeId;
+      });
+      const isExpanded = expandedNodes.includes(nodeId);
 
-      const isAdded = matrixRows.some(row => row.id === node.id);
+      const isAdded = matrixRows.some(row => row.id === nodeId);
 
       return (
-        <div key={node.id} style={{ display: 'flex', flexDirection: 'column' }}>
+        <div key={nodeId} style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem',
             padding: '0.625rem 1rem', paddingLeft: `${1 + depth * 1.5}rem`,
@@ -136,7 +172,7 @@ const TaoMaTranDe = () => {
           onClick={() => handleAddRow(node)}
           >
             {hasChildren ? (
-              <span onClick={(e) => toggleNode(e, node.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px' }}>
+              <span onClick={(e) => toggleNode(e, nodeId)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px' }}>
                 <svg 
                   width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                   style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
@@ -151,12 +187,55 @@ const TaoMaTranDe = () => {
             <svg width="18" height="18" viewBox="0 0 24 24" fill={isAdded ? '#bfdbfe' : '#64748b'} stroke={isAdded ? '#3b82f6' : '#64748b'} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
             </svg>
-            <span style={{ flex: 1, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{node.name}</span>
+            <span style={{ flex: 1, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{node.ten}</span>
           </div>
-          {isExpanded && renderTree(node.id, depth + 1)}
+          {isExpanded && renderTree(nodeId, depth + 1)}
         </div>
       );
     });
+  };
+
+  const handleExportExcel = () => {
+    const ws_data = [
+      ["STT", "Nội dung kiến thức", "Yêu cầu cần đạt", "Trắc nghiệm", "", "", "Trắc nghiệm đúng sai", "", "", "Tổng", "", "% Tổng điểm"],
+      ["", "", "", "Nhận biết", "Thông hiểu", "Vận dụng", "Nhận biết", "Thông hiểu", "Vận dụng", "TN", "DS", ""]
+    ];
+
+    matrixRows.forEach((row, index) => {
+      const rowNum0 = parseInt(matrixData[row.id]?.[0]) || 0;
+      const rowNum1 = parseInt(matrixData[row.id]?.[1]) || 0;
+      const rowNum2 = parseInt(matrixData[row.id]?.[2]) || 0;
+      const rowNum3 = parseInt(matrixData[row.id]?.[3]) || 0;
+      const rowNum4 = parseInt(matrixData[row.id]?.[4]) || 0;
+      const rowNum5 = parseInt(matrixData[row.id]?.[5]) || 0;
+      
+      ws_data.push([
+        index + 1, row.noiDung, row.yeuCau,
+        rowNum0, rowNum1, rowNum2, rowNum3, rowNum4, rowNum5,
+        rowNum0 + rowNum1 + rowNum2, rowNum3 + rowNum4 + rowNum5,
+        percentData[row.id] || ""
+      ]);
+    });
+
+    ws_data.push([
+      "Tổng", "", "",
+      getColTotal(0), getColTotal(1), getColTotal(2),
+      getColTotal(3), getColTotal(4), getColTotal(5),
+      getColTotal(0) + getColTotal(1) + getColTotal(2),
+      getColTotal(3) + getColTotal(4) + getColTotal(5),
+      getPercentTotal()
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }, { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
+      { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } }, { s: { r: 0, c: 3 }, e: { r: 0, c: 5 } },
+      { s: { r: 0, c: 6 }, e: { r: 0, c: 8 } }, { s: { r: 0, c: 9 }, e: { r: 0, c: 10 } },
+      { s: { r: 0, c: 11 }, e: { r: 1, c: 11 } }, { s: { r: ws_data.length - 1, c: 0 }, e: { r: ws_data.length - 1, c: 2 } }
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Ma Tran");
+    XLSX.writeFile(wb, (matrixName || "Ma_Tran_De_Thi") + ".xlsx");
   };
 
   return (
@@ -186,24 +265,102 @@ const TaoMaTranDe = () => {
           </svg>
         </button>
 
-        {/* Center: Action Buttons */}
-        <div style={{ display: 'flex', gap: '0.75rem', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+        {/* Center: Input */}
+        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', width: '300px' }}>
+          <input 
+            type="text" 
+            placeholder="Nhập tên ma trận..." 
+            value={matrixName}
+            onChange={(e) => setMatrixName(e.target.value)}
+            style={{
+              padding: '0.5rem 1rem', background: '#f8fafc', border: '1px solid #cbd5e1', outline: 'none', borderRadius: '0.375rem',
+              fontSize: '0.95rem', color: '#0f172a', fontWeight: 500, width: '100%', textAlign: 'center'
+            }}
+          />
+          {showNameError && (
+            <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: '0.5rem', background: '#dc2626', color: '#fff', padding: '0.5rem 1rem', borderRadius: '0.25rem', fontSize: '0.85rem', fontWeight: 500, boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 10, whiteSpace: 'nowrap' }}>
+              Vui lòng nhập tên ma trận đề thi
+              {/* MUI-like arrow */}
+              <div style={{ position: 'absolute', top: '-4px', left: '50%', width: '8px', height: '8px', background: '#dc2626', transform: 'translateX(-50%) rotate(45deg)' }}></div>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Action Buttons */}
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button style={{
-            padding: '0.5rem 1.75rem', fontSize: '0.9rem', fontWeight: 600,
+            padding: '0.5rem 1.5rem', fontSize: '0.9rem', fontWeight: 600,
             background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '0.375rem', cursor: 'pointer'
           }}>
             Hủy
           </button>
-          <button style={{
-            padding: '0.5rem 1.75rem', fontSize: '0.9rem', fontWeight: 600,
+          <button 
+            onClick={async () => {
+              if(!matrixName.trim()) {
+                setShowNameError(true);
+                setTimeout(() => setShowNameError(false), 3000);
+                return;
+              }
+
+              // Thu thập requirements từ matrixData
+              const requirements = [];
+              matrixRows.forEach(row => {
+                  const nb = matrixData[row.id]?.[0] || 0;
+                  const th = matrixData[row.id]?.[1] || 0;
+                  const vh = matrixData[row.id]?.[2] || 0;
+                  if (nb > 0) requirements.push({ cauTrucId: row.id, doKho: 'NB', count: nb });
+                  if (th > 0) requirements.push({ cauTrucId: row.id, doKho: 'TH', count: th });
+                  if (vh > 0) requirements.push({ cauTrucId: row.id, doKho: 'VH', count: vh });
+              });
+
+              if (requirements.length === 0) {
+                 alert('Ma trận hiện tại đang trống! Vui lòng nhập số câu hỏi vào ít nhất 1 ô.');
+                 return;
+              }
+
+              try {
+                  // Hiển thị một style loading nhỏ trên nút (có thể tối giản bằng cách thay đổi text thành "Đang tạo...")
+                  // Gọi API Backend lấy danh sách random câu hỏi khớp ma trận
+                  const response = await taoDeTuMaTran(selectedBank._id, requirements);
+                  const questions = response.data || [];
+                  
+                  // Format Text
+                  let generatedText = "[!b:$Phần I. Câu trắc nghiệm nhiều phương án lựa chọn.$] Mỗi câu hỏi thí sinh chỉ chọn một phương án.\n\n";
+                  questions.forEach((q, idx) => {
+                       generatedText += `Câu ${idx + 1}. ${q.noiDung}\n`;
+                       const dArr = ['A', 'B', 'C', 'D'];
+                       const luaChon = [q.luaChonA, q.luaChonB, q.luaChonC, q.luaChonD];
+                       
+                       for (let i = 0; i < luaChon.length; i++) {
+                           if (luaChon[i]) {
+                               const isCorrect = q.dapAnDung === dArr[i];
+                               generatedText += `${isCorrect ? '*' : ''}${dArr[i]}. ${luaChon[i]}\n`;
+                           }
+                       }
+                       generatedText += `\n`;
+                  });
+
+                  // Navigate với dữ liệu đã format ready
+                  navigate('/ngan-hang/editor', { 
+                    state: { 
+                      fromMatrix: true, 
+                      matrixName, 
+                      rawText: generatedText,
+                      selectedBank,
+                      generatedQuestions: questions
+                    } 
+                  });
+              } catch (err) {
+                  alert('Lỗi tạo đề từ ma trận: ' + err.message);
+              }
+            }}
+            style={{
+            padding: '0.5rem 1.5rem', fontSize: '0.9rem', fontWeight: 600,
             background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer'
           }}>
             Tiếp tục
           </button>
         </div>
-
-        {/* Right: Empty for balance */}
-        <div style={{ width: '36px' }}></div>
       </div>
 
       {/* Sub Header */}
@@ -211,19 +368,12 @@ const TaoMaTranDe = () => {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
         padding: '0.75rem 1.5rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0'
       }}>
-        <input 
-          type="text" 
-          placeholder="Nhập tên ma trận..." 
-          value={matrixName}
-          onChange={(e) => setMatrixName(e.target.value)}
-          style={{
-            padding: '0.5rem 0', background: 'transparent', border: 'none', outline: 'none',
-            fontSize: '1rem', color: '#0f172a', fontWeight: 500, width: '300px'
-          }}
-        />
+        <div style={{ width: '10px' }}></div>
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button style={{
+          <button 
+            onClick={handleExportExcel}
+            style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem',
             padding: '0.5rem 1rem', fontSize: '0.875rem', fontWeight: 600,
             background: '#2e3a8c', color: '#ffffff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer'
@@ -327,7 +477,7 @@ const TaoMaTranDe = () => {
                         </td>
                         {/* 6 inputs (Trắc nghiệm, Đúng sai) */}
                         {[...Array(6)].map((_, colIndex) => {
-                          const available = getMockAvailableCount(row.id, colIndex);
+                          const available = getAvailableCount(row.id, colIndex);
                           const isZero = available === 0;
                           const isActive = activeTooltip?.rowId === row.id && activeTooltip?.colIndex === colIndex;
                           const val = (matrixData[row.id] && matrixData[row.id][colIndex]) !== undefined ? matrixData[row.id][colIndex] : '';
