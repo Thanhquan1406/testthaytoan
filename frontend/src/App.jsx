@@ -130,7 +130,7 @@ const AppRoutes = () => {
       <Route path="/login/admin" element={<LoginAdmin />} />
       <Route path="/register" element={<Register />} />
 
-      {/* Public - thi ẩn danh */}
+      {/* Thi qua link */}
       <Route path="/thi-mo" element={<ThiMoCongKhai />} />
       <Route path="/lam-bai-an-danh/:phienThiId" element={<LamBaiAnDanh />} />
       <Route path="/ket-qua-an-danh/:phienThiId" element={<KetQuaAnDanh />} />

@@ -17,14 +17,15 @@ const getThongTin = async (req, res, next) => {
       deletedAt: null,
     })
       .populate('monHocId', 'ten')
-      .select('ten moTa thoiGianPhut monHocId soLanThiToiDa thoiGianMo thoiGianDong')
+      .select('ten moTa thoiGianPhut monHocId soLanThiToiDa thoiGianMo thoiGianDong doiTuongThi')
       .lean();
 
     if (!deThi) {
       return res.status(404).json({ success: false, message: 'Link thi không hợp lệ' });
     }
 
-    return success(res, deThi, 'Thông tin đề thi');
+    const yeuCauDangNhap = deThi.doiTuongThi !== 'TAT_CA';
+    return success(res, { ...deThi, yeuCauDangNhap }, 'Thông tin đề thi');
   } catch (err) {
     return next(err);
   }
@@ -49,4 +50,17 @@ const batDauAnDanh = async (req, res, next) => {
   }
 };
 
-module.exports = { getThongTin, batDauAnDanh };
+/**
+ * POST /api/public/de-thi-link/:maTruyCap/bat-dau-da-dang-nhap
+ * Bắt đầu thi từ link khi sinh viên đã đăng nhập.
+ */
+const batDauDaDangNhap = async (req, res, next) => {
+  try {
+    const data = await thiService.batDauThiDaDangNhapQuaLink(req.params.maTruyCap, req.user.id);
+    return created(res, data, 'Bắt đầu thi thành công');
+  } catch (err) {
+    return next(err);
+  }
+};
+
+module.exports = { getThongTin, batDauAnDanh, batDauDaDangNhap };

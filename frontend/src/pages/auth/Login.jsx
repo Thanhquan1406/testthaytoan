@@ -126,10 +126,12 @@ const Login = () => {
   const [serverError, setServerError] = useState('');
   const [googlePending, setGooglePending] = useState(null); // { credential, googleData }
 
-  const from = location.state?.from?.pathname || '/';
+  const fromPathname = location.state?.from?.pathname || '/';
+  const fromSearch = location.state?.from?.search || '';
 
   const redirectAfterLogin = (vaiTro) => {
-    const redirect = from !== '/' ? from :
+    const redirectTarget = `${fromPathname}${fromSearch}`;
+    const redirect = fromPathname !== '/' ? redirectTarget :
       vaiTro === 'GIAO_VIEN' ? '/giao-vien' : '/sinh-vien';
     navigate(redirect, { replace: true });
   };

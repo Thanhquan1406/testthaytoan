@@ -5,7 +5,7 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { getDanhSach, getMonHoc, getById as getDeThiById, create, update, softDelete, importFile } from '../../services/deThiService';
+import { getDanhSach, getMonHoc, getById as getDeThiById, create, update, softDelete, importFile, createPublicLink } from '../../services/deThiService';
 import { getDanhSach as getLopHocDanhSach } from '../../services/lopHocService';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Modal from '../../components/common/Modal';
@@ -145,6 +145,35 @@ const DeThi = () => {
 
   /* ── State xóa ── */
   const [deleteTarget, setDeleteTarget] = useState(null); // { _id, ten }
+
+  /* ── State copy link ── */
+  const [copiedId, setCopiedId] = useState(null);
+  const [copyingId, setCopyingId] = useState(null);
+
+  const handleCopyLink = async (d) => {
+    if (d.doiTuongThi && d.doiTuongThi !== 'TAT_CA') {
+      alert('Chỉ đề thi ở chế độ "Tất cả mọi người" mới có thể tạo link. Vui lòng cập nhật mục "Ai được phép làm" trước.');
+      return;
+    }
+
+    try {
+      setCopyingId(d._id);
+      let maTruyCap = d.maTruyCap;
+      if (!maTruyCap) {
+        const result = await createPublicLink(d._id);
+        maTruyCap = result.maTruyCap;
+        queryClient.invalidateQueries({ queryKey: ['gv-de-thi'] });
+      }
+      const link = `${window.location.origin}/thi-mo?code=${maTruyCap}`;
+      await navigator.clipboard.writeText(link);
+      setCopiedId(d._id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      alert(err?.message || 'Không thể sao chép link. Vui lòng thử lại.');
+    } finally {
+      setCopyingId(null);
+    }
+  };
 
   const set = (key) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -347,10 +376,43 @@ const DeThi = () => {
                 <span style={{ fontWeight: 600 }}>{d.ten}</span>
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                {d.monHocId?.ten} • {d.thoiGianPhut} phút • {d.cauHois?.length || 0} câu
+                {d.monHocId?.ten} • {d.thoiGianPhut} phút
               </div>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, marginLeft: '1rem' }}>
+              <button
+                type="button"
+                onClick={() => handleCopyLink(d)}
+                disabled={copyingId === d._id || (d.doiTuongThi && d.doiTuongThi !== 'TAT_CA')}
+                title="Sao chép link thi công khai"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  padding: '5px 12px',
+                  background: d.doiTuongThi && d.doiTuongThi !== 'TAT_CA'
+                    ? '#f3f4f6'
+                    : (copiedId === d._id ? '#dcfce7' : '#f3e8ff'),
+                  color: d.doiTuongThi && d.doiTuongThi !== 'TAT_CA'
+                    ? '#6b7280'
+                    : (copiedId === d._id ? '#15803d' : '#7c3aed'),
+                  border: `1px solid ${d.doiTuongThi && d.doiTuongThi !== 'TAT_CA'
+                    ? '#e5e7eb'
+                    : (copiedId === d._id ? '#bbf7d0' : '#e9d5ff')}`,
+                  borderRadius: '0.375rem',
+                  cursor: (copyingId === d._id || (d.doiTuongThi && d.doiTuongThi !== 'TAT_CA')) ? 'not-allowed' : 'pointer',
+                  fontSize: '0.8125rem', fontWeight: 500,
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  if (d.doiTuongThi === 'TAT_CA' && copiedId !== d._id) e.currentTarget.style.background = '#e9d5ff';
+                }}
+                onMouseLeave={(e) => {
+                  if (d.doiTuongThi === 'TAT_CA' && copiedId !== d._id) e.currentTarget.style.background = '#f3e8ff';
+                }}
+              >
+                {d.doiTuongThi && d.doiTuongThi !== 'TAT_CA'
+                  ? '🔒 Chỉ Tất cả mọi người'
+                  : (copyingId === d._id ? '⏳ Đang tạo...' : copiedId === d._id ? '✅ Đã sao chép!' : '🔗 Copy link')}
+              </button>
               <button
                 type="button"
                 onClick={() => openEditModal(d)}
@@ -813,6 +875,28 @@ D) Phương án D
               </div>
 
             </div>
+          </div>
+
+          {/* Nút chỉnh sửa câu hỏi trong đề */}
+          <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '1rem' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setEditModalOpen(false);
+                navigate(`/giao-vien/de-thi/${editingId}/chinh-sua`);
+              }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                padding: '0.75rem 1.25rem', background: '#f0fdf4', color: '#15803d',
+                border: '1.5px solid #bbf7d0', borderRadius: '0.5rem',
+                cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#dcfce7'; e.currentTarget.style.borderColor = '#86efac'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.borderColor = '#bbf7d0'; }}
+            >
+              📝 Sửa câu hỏi trong đề thi
+            </button>
           </div>
 
           {updateMutation.isError && (

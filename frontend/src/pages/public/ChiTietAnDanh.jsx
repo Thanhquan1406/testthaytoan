@@ -8,7 +8,7 @@ import axios from 'axios';
 import QuestionCard from '../../components/exam/QuestionCard';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
-const ANON_BASE = '/thi-an-danh/phien';
+const ANON_BASE = '/public/thi-an-danh/phien';
 
 const ChiTietAnDanh = () => {
   const { phienThiId } = useParams();

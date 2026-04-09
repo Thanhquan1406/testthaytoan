@@ -9,7 +9,7 @@ const ChuDe = require('../models/ChuDe');
 const MonHoc = require('../models/MonHoc');
 const { importDocx, importPdf } = require('./importExport.service');
 const { getPaginationParams, buildPaginationMeta } = require('../utils/pagination');
-const { generateAccessCode, toSlug } = require('../utils/slugify');
+const { generateAccessCode } = require('../utils/slugify');
 
 const TIEN_TO_DUONG_DAN = '/thi-mo/';
 
@@ -133,20 +133,28 @@ const capNhatDeThi = async (deThiId, giaoVienId, data) => {
     lopHocIds, sinhVienIds
   } = data;
 
+  const setPayload = {
+    ten, moTa, thoiGianPhut, soLanThiToiDa, monHocId,
+    tronCauHoi, tronDapAn, choPhepXemLai,
+    thoiGianMo, thoiGianDong, thangDiemToiDa,
+    ...(doiTuongThi !== undefined && { doiTuongThi }),
+    ...(cheDoXemDiem !== undefined && { cheDoXemDiem }),
+    ...(cheDoXemDapAn !== undefined && { cheDoXemDapAn }),
+    ...(diemToiThieuXemDapAn !== undefined && { diemToiThieuXemDapAn }),
+    ...(lopHocIds !== undefined && { lopHocIds: lopHocIds.map(id => ({ lopHocId: id })) }),
+    ...(sinhVienIds !== undefined && { sinhVienIds: sinhVienIds.map(id => ({ sinhVienId: id })) }),
+  };
+
+  // Nếu đổi đối tượng thi khỏi TAT_CA thì thu hồi link công khai ngay.
+  if (doiTuongThi !== undefined && doiTuongThi !== 'TAT_CA') {
+    setPayload.maTruyCap = null;
+    setPayload.duongDanTruyCap = null;
+  }
+
   const updated = await DeThi.findOneAndUpdate(
     { _id: deThiId, nguoiDungId: giaoVienId, deletedAt: null },
     {
-      $set: {
-        ten, moTa, thoiGianPhut, soLanThiToiDa, monHocId,
-        tronCauHoi, tronDapAn, choPhepXemLai,
-        thoiGianMo, thoiGianDong, thangDiemToiDa,
-        ...(doiTuongThi !== undefined && { doiTuongThi }),
-        ...(cheDoXemDiem !== undefined && { cheDoXemDiem }),
-        ...(cheDoXemDapAn !== undefined && { cheDoXemDapAn }),
-        ...(diemToiThieuXemDapAn !== undefined && { diemToiThieuXemDapAn }),
-        ...(lopHocIds !== undefined && { lopHocIds: lopHocIds.map(id => ({ lopHocId: id })) }),
-        ...(sinhVienIds !== undefined && { sinhVienIds: sinhVienIds.map(id => ({ sinhVienId: id })) })
-      },
+      $set: setPayload,
     },
     { new: true, runValidators: true }
   );
@@ -282,6 +290,12 @@ const thuHoiKhoiLop = async (deThiId, giaoVienId, lopHocId) => {
 const taoLinkCongKhai = async (deThiId, giaoVienId) => {
   const deThi = await DeThi.findOne({ _id: deThiId, nguoiDungId: giaoVienId, deletedAt: null });
   if (!deThi) throw Object.assign(new Error('Không tìm thấy đề thi'), { statusCode: 404 });
+  if (deThi.doiTuongThi !== 'TAT_CA') {
+    throw Object.assign(
+      new Error('Chỉ đề thi ở chế độ "Tất cả mọi người" mới được tạo link công khai'),
+      { statusCode: 400 }
+    );
+  }
 
   if (!deThi.maTruyCap) {
     const maTruyCap = generateAccessCode(8);

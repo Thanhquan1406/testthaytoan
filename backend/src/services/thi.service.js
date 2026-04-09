@@ -7,6 +7,7 @@
 const DeThi = require('../models/DeThi');
 const PhienThi = require('../models/PhienThi');
 const NguoiDung = require('../models/NguoiDung');
+const LopHoc = require('../models/LopHoc');
 const lopHocService = require('./lopHoc.service');
 const { taoTokenThiAnDanh } = require('./jwt.service');
 const socketEmitter = require('../realtime/socketEmitter');
@@ -77,8 +78,14 @@ const batDauThiAnDanh = async (maTruyCap, hoTenAnDanh) => {
   });
 
   if (!deThi) throw Object.assign(new Error('Link thi không hợp lệ hoặc đã bị hủy'), { statusCode: 404 });
+  if (deThi.doiTuongThi !== 'TAT_CA') {
+    throw Object.assign(new Error('Đề thi này yêu cầu đăng nhập để tham gia'), { statusCode: 403 });
+  }
 
   await _kiemTraThoiGianMoDong(deThi);
+  if (!Array.isArray(deThi.cauHois) || deThi.cauHois.length === 0) {
+    throw Object.assign(new Error('Đề thi chưa có câu hỏi, vui lòng liên hệ giáo viên'), { statusCode: 400 });
+  }
 
   const phienThi = await _taoPhienThi({
     deThiId: deThi._id,
@@ -106,6 +113,76 @@ const batDauThiAnDanh = async (maTruyCap, hoTenAnDanh) => {
   } catch { /* không để socket failure ảnh hưởng đến thi */ }
 
   return { phienThiId: phienThi._id, token };
+};
+
+/**
+ * Bắt đầu thi từ link đối với sinh viên đã đăng nhập.
+ * Áp dụng cho đề thi có đối tượng LOP_HOC hoặc HOC_SINH.
+ * @param {string} maTruyCap
+ * @param {string} sinhVienId
+ * @returns {Promise<{phienThiId: string}>}
+ */
+const batDauThiDaDangNhapQuaLink = async (maTruyCap, sinhVienId) => {
+  const deThi = await DeThi.findOne({ maTruyCap, deletedAt: null });
+  if (!deThi) throw Object.assign(new Error('Link thi không hợp lệ hoặc đã bị hủy'), { statusCode: 404 });
+
+  await _kiemTraThoiGianMoDong(deThi);
+  if (!Array.isArray(deThi.cauHois) || deThi.cauHois.length === 0) {
+    throw Object.assign(new Error('Đề thi chưa có câu hỏi, vui lòng liên hệ giáo viên'), { statusCode: 400 });
+  }
+
+  if (deThi.doiTuongThi === 'TAT_CA') {
+    throw Object.assign(new Error('Đề thi này cho phép thi công khai, không cần đăng nhập'), { statusCode: 400 });
+  }
+
+  let lopHocId = null;
+  if (deThi.doiTuongThi === 'LOP_HOC') {
+    const dsLopDaGiao = (deThi.lopHocIds || []).map((item) => item.lopHocId).filter(Boolean);
+    const lopHopLe = await LopHoc.findOne({
+      _id: { $in: dsLopDaGiao },
+      sinhVienIds: sinhVienId,
+    }).select('_id').lean();
+
+    if (!lopHopLe) {
+      throw Object.assign(new Error('Bạn không thuộc lớp được giao đề thi này'), { statusCode: 403 });
+    }
+    lopHocId = lopHopLe._id.toString();
+  }
+
+  if (deThi.doiTuongThi === 'HOC_SINH') {
+    const duocGiao = (deThi.sinhVienIds || []).some(
+      (item) => item?.sinhVienId?.toString() === sinhVienId
+    );
+    if (!duocGiao) {
+      throw Object.assign(new Error('Bạn không nằm trong danh sách được giao đề thi này'), { statusCode: 403 });
+    }
+  }
+
+  await _kiemTraGioiHanLuotThi(sinhVienId, deThi);
+  const phienThi = await _taoPhienThi({
+    deThiId: deThi._id,
+    nguoiDungId: sinhVienId,
+    lopHocId,
+    maTruyCapDaDung: maTruyCap,
+    deThi,
+  });
+
+  try {
+    const sv = await NguoiDung.findById(sinhVienId).select('ho ten maNguoiDung').lean();
+    socketEmitter.emitStudentJoined(deThi._id, {
+      phienThiId: phienThi._id,
+      deThiId: deThi._id,
+      nguoiDung: sv ? { _id: sv._id, ho: sv.ho, ten: sv.ten, maNguoiDung: sv.maNguoiDung } : null,
+      hoTenAnDanh: null,
+      trangThai: phienThi.trangThai,
+      thoiGianBatDau: phienThi.thoiGianBatDau,
+      tongSoCau: phienThi.cauTraLois.length,
+      eventId: `${phienThi._id}-joined-${Date.now()}`,
+      serverTime: new Date(),
+    });
+  } catch { /* không để socket failure ảnh hưởng đến thi */ }
+
+  return { phienThiId: phienThi._id };
 };
 
 // ─── NỘI DUNG & LƯU ĐÁP ÁN ─────────────────────────────────────────────────
@@ -658,6 +735,7 @@ const _tronLuaChon = (cauHoi) => {
 module.exports = {
   batDauThiQuaLop,
   batDauThiAnDanh,
+  batDauThiDaDangNhapQuaLink,
   layNoiDungBaiThi,
   luuTraLoi,
   nopBai,

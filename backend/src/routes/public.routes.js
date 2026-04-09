@@ -5,6 +5,8 @@
 
 const express = require('express');
 const router = express.Router();
+const { verifyToken } = require('../middleware/auth.middleware');
+const { requireSinhVien } = require('../middleware/role.middleware');
 
 const deThiLinkCtrl = require('../controllers/public/deThiLink.controller');
 const thiAnDanhCtrl = require('../controllers/public/thiAnDanh.controller');
@@ -12,6 +14,12 @@ const thiAnDanhCtrl = require('../controllers/public/thiAnDanh.controller');
 // Thông tin đề thi qua link (không cần auth)
 router.get('/de-thi-link/:maTruyCap/thong-tin', deThiLinkCtrl.getThongTin);
 router.post('/de-thi-link/:maTruyCap/bat-dau', deThiLinkCtrl.batDauAnDanh);
+router.post(
+  '/de-thi-link/:maTruyCap/bat-dau-da-dang-nhap',
+  verifyToken,
+  requireSinhVien,
+  deThiLinkCtrl.batDauDaDangNhap
+);
 
 // Phiên thi ẩn danh (cần token ẩn danh riêng)
 router.get(

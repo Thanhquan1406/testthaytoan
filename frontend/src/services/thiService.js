@@ -6,7 +6,7 @@ import api from './api';
 import axios from 'axios';
 
 const SV_BASE = '/sinh-vien/thi';
-const ANON_BASE = '/thi-an-danh/phien';
+const ANON_BASE = '/public/thi-an-danh/phien';
 
 // ─── Sinh viên đăng nhập ─────────────────────────────────────────────────────
 export const batDau = (deThiId, lopHocId) =>
