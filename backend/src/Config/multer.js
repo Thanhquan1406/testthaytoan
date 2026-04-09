@@ -62,4 +62,26 @@ const uploadImportMemory = multer({
   limits: { fileSize: MAX_FILE_SIZE_MB * 1024 * 1024 },
 });
 
-module.exports = { uploadImport, uploadImportMemory };
+/**
+ * Lọc chỉ chấp nhận file Excel (XLSX, XLS)
+ */
+const excelFileFilter = (_req, file, cb) => {
+  const allowedMimes = [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+    'application/vnd.ms-excel', // .xls
+  ];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Chỉ chấp nhận file Excel (.xlsx, .xls)'), false);
+  }
+};
+
+/** Instance upload Excel vào memory buffer */
+const uploadExcelMemory = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: excelFileFilter,
+  limits: { fileSize: MAX_FILE_SIZE_MB * 1024 * 1024 },
+});
+
+module.exports = { uploadImport, uploadImportMemory, uploadExcelMemory };

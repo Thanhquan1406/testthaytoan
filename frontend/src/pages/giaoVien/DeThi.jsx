@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getDanhSach, getMonHoc, getById as getDeThiById, create, update, softDelete, importFile } from '../../services/deThiService';
-import { getDanhSach as getLopHocDanhSach, getSinhVien as getSinhVienDanhSach } from '../../services/lopHocService';
+import { getDanhSach as getLopHocDanhSach } from '../../services/lopHocService';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Modal from '../../components/common/Modal';
 
@@ -176,11 +176,7 @@ const DeThi = () => {
     queryFn: getLopHocDanhSach,
     enabled: editModalOpen,
   });
-  const { data: sinhViens = [], isLoading: loadingSinhVien } = useQuery({
-    queryKey: ['gv-sinh-vien-for-de-thi'],
-    queryFn: () => getSinhVienDanhSach(''),
-    enabled: editModalOpen,
-  });
+
 
   const { data: chuDeList = [], isLoading: loadingChuDe } = useChuDe(form.monHocId);
 
@@ -713,7 +709,6 @@ D) Phương án D
               options={[
                 { value: 'TAT_CA', label: 'Tất cả mọi người' },
                 { value: 'GIAO_THEO_LOP', label: 'Giao theo lớp' },
-                { value: 'GIAO_THEO_HOC_SINH', label: 'Giao theo học sinh' },
               ]}
             />
             {editForm.doiTuongThi === 'TAT_CA' && (
@@ -751,44 +746,6 @@ D) Phương án D
                           style={{ accentColor: '#2563eb', cursor: 'pointer', width: '15px', height: '15px' }}
                         />
                         <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>{lop.ten}</span>
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-            {editForm.doiTuongThi === 'GIAO_THEO_HOC_SINH' && (
-              <div style={{ marginTop: '0.75rem', border: '1px solid var(--border-default)', borderRadius: '0.5rem', overflow: 'hidden' }}>
-                <div style={{ background: 'var(--bg-surface-muted)', padding: '0.625rem 0.875rem', borderBottom: '1px solid var(--border-default)', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Danh sách học sinh
-                </div>
-                <div style={{ maxHeight: '220px', overflowY: 'auto', background: 'var(--bg-surface)' }}>
-                  {loadingSinhVien ? (
-                    <p style={{ margin: 0, padding: '0.75rem 0.875rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Đang tải danh sách học sinh...</p>
-                  ) : !sinhViens.length ? (
-                    <p style={{ margin: 0, padding: '0.75rem 0.875rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Chưa có học sinh nào</p>
-                  ) : (
-                    sinhViens.map((sv) => (
-                      <label
-                        key={sv._id}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 0.875rem', borderBottom: '1px solid var(--border-default)', cursor: 'pointer' }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={editForm.sinhVienIds.includes(sv._id)}
-                          onChange={(e) =>
-                            setEditForm((prev) => ({
-                              ...prev,
-                              sinhVienIds: e.target.checked
-                                ? [...prev.sinhVienIds, sv._id]
-                                : prev.sinhVienIds.filter((id) => id !== sv._id),
-                            }))
-                          }
-                          style={{ accentColor: '#2563eb', cursor: 'pointer', width: '15px', height: '15px' }}
-                        />
-                        <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                          {sv.ho} {sv.ten} ({sv.maNguoiDung || sv.email})
-                        </span>
                       </label>
                     ))
                   )}

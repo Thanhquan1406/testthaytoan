@@ -29,6 +29,7 @@ import ChonPhuongThucTaoDe from './pages/giaoVien/ChonPhuongThucTaoDe';
 import TrangSoanThaoDeThi from './pages/giaoVien/TrangSoanThaoDeThi';
 import GVChinhSuaCauHoi from './pages/giaoVien/ChinhSuaCauHoi';
 import GVLopHoc from './pages/giaoVien/LopHoc';
+import GVChiTietLopHoc from './pages/giaoVien/ChiTietLopHoc';
 
 // Ngân hàng câu hỏi (Shared)
 import NganHangCauHoiList from './pages/giaoVien/NganHangCauHoi';
@@ -36,7 +37,6 @@ import XemNganHangCauHoi from './pages/giaoVien/XemNganHangCauHoi';
 import ImportFile from './pages/giaoVien/ImportFile';
 import TrangSoanThao from './pages/giaoVien/TrangSoanThao';
 import TaoMaTranDe from './pages/giaoVien/TaoMaTranDe';
-import GVSinhVien from './pages/giaoVien/SinhVien';
 import GVKetQua from './pages/giaoVien/KetQua';
 import GVTheoDoi from './pages/giaoVien/TheoDoi';
 import GVXemBai from './pages/giaoVien/XemBaiThi';
@@ -73,7 +73,6 @@ const GV_NAV = [
   { to: '/giao-vien/de-thi', label: 'Đề thi', icon: '📄' },
   { to: '/ngan-hang/dashboard', label: 'Ngân hàng câu hỏi', icon: '❓' },
   { to: '/giao-vien/lop-hoc', label: 'Lớp học', icon: '🏫' },
-  { to: '/giao-vien/sinh-vien', label: 'Sinh viên', icon: '👨‍🎓' },
   { to: '/giao-vien/ket-qua', label: 'Kết quả', icon: '📊' },
   { to: '/giao-vien/theo-doi', label: 'Theo dõi thi', icon: '👁' },
   { to: '/giao-vien/ho-so', label: 'Hồ sơ', icon: '👤' },
@@ -153,7 +152,7 @@ const AppRoutes = () => {
         <Route path="/giao-vien/de-thi/tao-moi" element={<ChonPhuongThucTaoDe />} />
         <Route path="/giao-vien/de-thi/:deThiId/chinh-sua" element={<GVChinhSuaCauHoi />} />
         <Route path="/giao-vien/lop-hoc" element={<GVLopHoc />} />
-        <Route path="/giao-vien/sinh-vien" element={<GVSinhVien />} />
+        <Route path="/giao-vien/lop-hoc/:lopId" element={<GVChiTietLopHoc />} />
         <Route path="/giao-vien/ket-qua" element={<GVKetQua />} />
         <Route path="/giao-vien/ket-qua/xem/:phienThiId" element={<GVXemBai />} />
         <Route path="/giao-vien/theo-doi" element={<GVTheoDoi />} />

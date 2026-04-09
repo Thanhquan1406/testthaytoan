@@ -8,14 +8,13 @@ const router = express.Router();
 
 const { verifyToken } = require('../middleware/auth.middleware');
 const { requireGiaoVien } = require('../middleware/role.middleware');
-const { uploadImportMemory } = require('../Config/multer');
+const { uploadImportMemory, uploadExcelMemory } = require('../Config/multer');
 
 const hoSoCtrl = require('../controllers/giaoVien/hoSo.controller');
 const deThiCtrl = require('../controllers/giaoVien/deThi.controller');
 const cauHoiCtrl = require('../controllers/giaoVien/cauHoi.controller');
 const lopHocCtrl = require('../controllers/giaoVien/lopHoc.controller');
 const ketQuaCtrl = require('../controllers/giaoVien/ketQua.controller');
-const sinhVienCtrl = require('../controllers/giaoVien/sinhVien.controller');
 const theoDoiCtrl = require('../controllers/giaoVien/theoDoi.controller');
 const nganHangCtrl = require('../controllers/giaoVien/nganHang.controller');
 const cauTrucCtrl = require('../controllers/giaoVien/cauTruc.controller');
@@ -84,13 +83,21 @@ router.post('/ngan-hang/:nganHangId/cau-hoi', nganHangCtrl.saveCauHoi);
 router.get('/ngan-hang/:nganHangId/cau-hoi', nganHangCtrl.getCauHoi);
 router.post('/ngan-hang/:nganHangId/tao-de-tu-ma-tran', nganHangCtrl.taoDeTuMaTran);
 
-// Lớp học
-router.get('/lop-hoc/sinh-vien', lopHocCtrl.getSinhVien);
+// ─── LỚP HỌC ─────────────────────────────────────────────────────────────────
+// Lookup sinh viên theo MSSV (phải đặt trước :id routes)
+router.get('/lop-hoc/tim-sinh-vien', lopHocCtrl.timSinhVien);
 router.get('/lop-hoc', lopHocCtrl.getAll);
 router.post('/lop-hoc', lopHocCtrl.create);
 router.get('/lop-hoc/:id', lopHocCtrl.getById);
 router.put('/lop-hoc/:id', lopHocCtrl.update);
 router.delete('/lop-hoc/:id', lopHocCtrl.remove);
+// Quản lý sinh viên trong lớp
+router.post('/lop-hoc/:id/sinh-vien', lopHocCtrl.themSinhVien);
+router.delete('/lop-hoc/:id/sinh-vien/:sinhVienId', lopHocCtrl.xoaSinhVien);
+router.post('/lop-hoc/:id/import-sinh-vien', uploadExcelMemory.single('file'), lopHocCtrl.importSinhVien);
+// Đề thi và bảng điểm theo lớp
+router.get('/lop-hoc/:id/de-thi', lopHocCtrl.getDeThiCuaLop);
+router.get('/lop-hoc/:id/bang-diem', lopHocCtrl.getBangDiem);
 
 // Kết quả
 router.get('/ket-qua/de-thi', ketQuaCtrl.getDanhSachDeThi);
@@ -105,12 +112,8 @@ router.get('/ket-qua', ketQuaCtrl.getKetQua);
 router.put('/ket-qua/:phienThiId/ghi-chu', ketQuaCtrl.updateGhiChu);
 router.put('/ket-qua/:phienThiId/diem', ketQuaCtrl.updateDiem);
 
-// Sinh viên
-router.get('/sinh-vien', sinhVienCtrl.getSinhVien);
-
 // Theo dõi thi
 router.get('/theo-doi-thi/de-thi', theoDoiCtrl.getDeThi);
 router.get('/theo-doi-thi', theoDoiCtrl.getTheoDoi);
 
 module.exports = router;
-
