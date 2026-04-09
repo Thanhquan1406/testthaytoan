@@ -1,9 +1,15 @@
 /**
  * @fileoverview Sidebar điều hướng theo vai trò.
  * Nhận danh sách items từ props để tái sử dụng cho cả 3 role.
+ * Hỗ trợ toggle collapse/expand với animation mượt.
  */
 
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { NavLink } from 'react-router-dom';
+import './Sidebar.css';
+
+/** Các root path cần exact match (dashboard pages) */
+const ROOT_PATHS = new Set(['/admin', '/giao-vien', '/sinh-vien']);
 
 /**
  * @param {{
@@ -12,41 +18,103 @@ import { NavLink } from 'react-router-dom';
  * }} props
  */
 const Sidebar = ({ items, title }) => {
+  const [collapsed, setCollapsed] = useState(false);
+  const [tooltip, setTooltip] = useState({ text: '', top: 0, visible: false });
+  const tooltipTimeout = useRef(null);
+
+  // Cleanup tooltip timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (tooltipTimeout.current) clearTimeout(tooltipTimeout.current);
+    };
+  }, []);
+
+  const showTooltip = useCallback((e, label) => {
+    if (!collapsed) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (tooltipTimeout.current) clearTimeout(tooltipTimeout.current);
+    tooltipTimeout.current = setTimeout(() => {
+      setTooltip({ text: label, top: rect.top + rect.height / 2, visible: true });
+    }, 150);
+  }, [collapsed]);
+
+  const hideTooltip = useCallback(() => {
+    if (tooltipTimeout.current) clearTimeout(tooltipTimeout.current);
+    setTooltip(prev => ({ ...prev, visible: false }));
+  }, []);
+
   return (
-    <aside
-      style={{
-        width: '240px', minHeight: '100vh', background: 'var(--sidebar-bg)',
-        padding: '1.5rem 0', display: 'flex', flexDirection: 'column',
-        flexShrink: 0,
-      }}
-    >
-      {title && (
-        <div style={{ padding: '0 1.25rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '0.75rem' }}>
-          <span style={{ color: 'var(--sidebar-text)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
+    <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
+      {/* Toggle button */}
+      <button
+        className="sidebar__toggle"
+        onClick={() => setCollapsed(c => !c)}
+        aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
+        title={collapsed ? 'Mở rộng' : 'Thu gọn'}
+      >
+        <svg
+          className={`sidebar__toggle-icon ${collapsed ? 'sidebar__toggle-icon--rotated' : ''}`}
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+      </button>
+
+      {/* Title / Header */}
+      <div className="sidebar__header">
+        {title && (
+          <span className={`sidebar__title ${collapsed ? 'sidebar__title--hidden' : ''}`}>
             {title}
           </span>
-        </div>
-      )}
+        )}
+        {collapsed && title && (
+          <span className="sidebar__title-collapsed">{title.charAt(0)}</span>
+        )}
+      </div>
 
-      <nav>
+      {/* Navigation items */}
+      <nav className="sidebar__nav">
         {items.map(({ to, label, icon }) => (
           <NavLink
             key={to}
             to={to}
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: '0.75rem',
-              padding: '0.7rem 1.25rem', color: isActive ? 'var(--sidebar-text-active)' : 'var(--sidebar-text)',
-              background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
-              textDecoration: 'none', fontSize: '0.9rem', fontWeight: isActive ? 600 : 400,
-              borderLeft: isActive ? '3px solid #818cf8' : '3px solid transparent',
-              transition: 'all 0.15s ease',
-            })}
+            end={ROOT_PATHS.has(to)}
+            className={({ isActive }) =>
+              `sidebar__item ${isActive ? 'sidebar__item--active' : ''}`
+            }
+            onMouseEnter={(e) => showTooltip(e, label)}
+            onMouseLeave={hideTooltip}
           >
-            {icon && <span style={{ fontSize: '1.1rem' }}>{icon}</span>}
-            {label}
+            {/* Active indicator bar */}
+            <span className="sidebar__active-indicator" />
+
+            {/* Icon */}
+            {icon && <span className="sidebar__icon">{icon}</span>}
+
+            {/* Label - hidden when collapsed */}
+            <span className={`sidebar__label ${collapsed ? 'sidebar__label--hidden' : ''}`}>
+              {label}
+            </span>
           </NavLink>
         ))}
       </nav>
+
+      {/* Tooltip for collapsed mode */}
+      {collapsed && tooltip.visible && (
+        <div
+          className="sidebar__tooltip"
+          style={{ top: `${tooltip.top}px` }}
+        >
+          {tooltip.text}
+        </div>
+      )}
     </aside>
   );
 };

@@ -95,9 +95,9 @@ const SV_NAV = [
 const DashboardLayout = ({ navItems, sidebarTitle }) => (
   <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg-page)', color: 'var(--text-primary)' }}>
     <Navbar />
-    <div style={{ display: 'flex', flex: 1 }}>
+    <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
       <Sidebar items={navItems} title={sidebarTitle} />
-      <main style={{ flex: 1, padding: '2rem', overflowY: 'auto', maxHeight: 'calc(100vh - 64px)' }}>
+      <main style={{ flex: 1, padding: '2rem', overflowY: 'auto', maxHeight: 'calc(100vh - 64px)', transition: 'margin 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
           <Outlet />
         </motion.div>

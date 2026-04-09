@@ -10,12 +10,6 @@ import { login, loginGoogle, registerGoogle } from '../../services/authService';
 import useAuth from '../../hooks/useAuth';
 import CaptchaInput from '../../components/auth/CaptchaInput';
 
-const inputStyle = {
-  width: '100%', padding: '0.6rem 0.875rem', border: '1px solid #d1d5db',
-  borderRadius: '0.5rem', fontSize: '0.9rem', outline: 'none',
-  boxSizing: 'border-box',
-};
-
 /** Modal bổ sung thông tin sau đăng nhập Google lần đầu */
 const GoogleCompleteModal = ({ googleData, onComplete, onClose }) => {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
@@ -34,39 +28,49 @@ const GoogleCompleteModal = ({ googleData, onComplete, onClose }) => {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem',
     }}>
-      <div style={{
-        background: '#fff', borderRadius: '1rem', padding: '2rem',
-        width: '100%', maxWidth: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-      }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e1b4b', marginBottom: '0.5rem' }}>
+      <div className="auth-card" style={{ maxWidth: '460px', padding: '2.5rem' }}>
+        <h2 className="auth-title" style={{ fontSize: '1.6rem', marginBottom: '0.5rem' }}>
           Hoàn tất đăng ký
         </h2>
-        <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+        <p className="auth-subtitle" style={{ marginBottom: '1.5rem' }}>
           Xin chào <strong>{googleData.ho} {googleData.ten}</strong>! Vui lòng bổ sung thông tin để hoàn tất.
         </p>
 
         {serverError && (
-          <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#dc2626', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
+          <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#dc2626', padding: '0.75rem', borderRadius: '0.75rem', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
             {serverError}
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
-            <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#374151', display: 'block', marginBottom: '0.5rem' }}>
-              Bạn là
-            </label>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <label className="auth-label">Bạn là</label>
+            <div style={{ display: 'flex', gap: '1rem' }}>
               {[['SINH_VIEN', 'Sinh viên', '👨‍🎓'], ['GIAO_VIEN', 'Giáo viên', '👨‍🏫']].map(([val, label, icon]) => (
                 <label key={val} style={{
-                  flex: 1, padding: '0.65rem', border: '2px solid #e5e7eb',
-                  borderRadius: '0.5rem', cursor: 'pointer', display: 'flex',
-                  alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem',
-                }}>
-                  <input type="radio" value={val} {...register('vaiTro')} style={{ accentColor: '#4f46e5' }} />
+                  flex: 1, padding: '0.8rem', border: '2px solid var(--border-default)',
+                  borderRadius: '0.75rem', cursor: 'pointer', display: 'flex',
+                  alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem', fontWeight: 500,
+                  transition: 'all 0.2s', background: 'var(--bg-surface)'
+                }}
+                onMouseOver={(e) => { if (!e.currentTarget.querySelector('input').checked) e.currentTarget.style.borderColor = 'var(--gray-300)' }}
+                onMouseOut={(e) => { if (!e.currentTarget.querySelector('input').checked) e.currentTarget.style.borderColor = 'var(--border-default)' }}
+                >
+                  <input type="radio" value={val} {...register('vaiTro')} 
+                    style={{ accentColor: 'var(--primary)', transform: 'scale(1.2)' }}
+                    onChange={(e) => {
+                      const labels = e.target.closest('div').querySelectorAll('label');
+                      labels.forEach(l => {
+                        l.style.borderColor = 'var(--border-default)';
+                        l.style.background = 'var(--bg-surface)';
+                      });
+                      e.target.closest('label').style.borderColor = 'var(--primary)';
+                      e.target.closest('label').style.background = 'var(--primary-light)';
+                    }}
+                  />
                   {icon} {label}
                 </label>
               ))}
@@ -74,43 +78,35 @@ const GoogleCompleteModal = ({ googleData, onComplete, onClose }) => {
           </div>
 
           <div>
-            <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#374151', display: 'block', marginBottom: '4px' }}>
-              Số điện thoại
-            </label>
+            <label className="auth-label">Số điện thoại</label>
             <input
               type="tel"
               placeholder="09xxxxxxxx"
-              style={{ ...inputStyle, borderColor: errors.soDienThoai ? '#ef4444' : '#d1d5db' }}
+              className={`auth-input ${errors.soDienThoai ? 'error' : ''}`}
               {...register('soDienThoai', {
                 required: 'Vui lòng nhập số điện thoại',
                 pattern: { value: /^[0-9]{10,11}$/, message: 'Số điện thoại 10-11 chữ số' },
               })}
             />
             {errors.soDienThoai && (
-              <span style={{ color: '#ef4444', fontSize: '0.75rem' }}>{errors.soDienThoai.message}</span>
+              <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '0.2rem', display: 'block' }}>{errors.soDienThoai.message}</span>
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
             <button
               type="button"
               onClick={onClose}
-              style={{
-                flex: 1, padding: '0.65rem', background: '#f3f4f6', color: '#374151',
-                border: 'none', borderRadius: '0.5rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem',
-              }}
+              className="auth-btn"
+              style={{ flex: 1, background: 'var(--gray-100)', color: 'var(--gray-700)' }}
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              style={{
-                flex: 2, padding: '0.65rem',
-                background: isSubmitting ? '#a5b4fc' : '#4f46e5',
-                color: '#fff', border: 'none', borderRadius: '0.5rem',
-                fontWeight: 600, cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '0.9rem',
-              }}
+              className="auth-btn auth-btn-primary"
+              style={{ flex: 2 }}
             >
               {isSubmitting ? 'Đang xử lý...' : 'Hoàn tất đăng ký'}
             </button>
@@ -186,70 +182,61 @@ const Login = () => {
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'linear-gradient(135deg, #eef2ff 0%, #e0f2fe 100%)',
+      background: 'linear-gradient(135deg, #eef2ff 0%, #e0f2fe 100%)', padding: '2rem'
     }}>
-      <div style={{
-        background: '#fff', borderRadius: '1rem', padding: '2.5rem 2rem',
-        boxShadow: '0 10px 40px rgba(0,0,0,0.12)', width: '100%', maxWidth: '420px',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎓</div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e1b4b' }}>Đăng nhập</h1>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+      <div className="auth-card" style={{ maxWidth: '460px', padding: '3rem 2.5rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>🎓</div>
+          <h1 className="auth-title">Đăng nhập</h1>
+          <p className="auth-subtitle" style={{ margin: 0 }}>
             Hệ thống thi trắc nghiệm trực tuyến
           </p>
         </div>
 
         {serverError && (
-          <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#dc2626', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
+          <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#dc2626', padding: '0.75rem', borderRadius: '0.75rem', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
             {serverError}
           </div>
         )}
 
         {/* Nút đăng nhập Google */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
             onError={handleGoogleError}
             text="signin_with"
             shape="rectangular"
             locale="vi"
-            width="340"
+            width="100%"
           />
         </div>
 
         {/* Divider */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-          <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-          <span style={{ color: '#9ca3af', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>hoặc đăng nhập bằng tài khoản</span>
-          <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+        <div className="auth-divider">
+          <span className="auth-divider-text">hoặc đăng nhập bằng email</span>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '4px' }}>
-              Email hoặc số điện thoại
-            </label>
+            <label className="auth-label">Email hoặc số điện thoại</label>
             <input
               type="text"
               placeholder="Nhập email hoặc SĐT"
-              style={{ ...inputStyle, borderColor: errors.email ? '#ef4444' : '#d1d5db' }}
+              className={`auth-input ${errors.email ? 'error' : ''}`}
               {...register('email', { required: 'Vui lòng nhập email hoặc SĐT' })}
             />
-            {errors.email && <span style={{ color: '#ef4444', fontSize: '0.75rem' }}>{errors.email.message}</span>}
+            {errors.email && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '0.2rem', display: 'block' }}>{errors.email.message}</span>}
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '4px' }}>
-              Mật khẩu
-            </label>
+            <label className="auth-label">Mật khẩu</label>
             <input
               type="password"
               placeholder="Nhập mật khẩu"
-              style={{ ...inputStyle, borderColor: errors.matKhau ? '#ef4444' : '#d1d5db' }}
+              className={`auth-input ${errors.matKhau ? 'error' : ''}`}
               {...register('matKhau', { required: 'Vui lòng nhập mật khẩu' })}
             />
-            {errors.matKhau && <span style={{ color: '#ef4444', fontSize: '0.75rem' }}>{errors.matKhau.message}</span>}
+            {errors.matKhau && <span style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '0.2rem', display: 'block' }}>{errors.matKhau.message}</span>}
           </div>
 
           <CaptchaInput
@@ -263,22 +250,21 @@ const Login = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            style={{
-              padding: '0.7rem', background: isSubmitting ? '#a5b4fc' : '#4f46e5',
-              color: '#fff', border: 'none', borderRadius: '0.5rem', fontWeight: 600,
-              cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '1rem',
-            }}
+            className="auth-btn auth-btn-primary"
+            style={{ marginTop: '0.5rem' }}
           >
             {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem', color: '#6b7280' }}>
+        <div style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
           Chưa có tài khoản?{' '}
-          <Link to="/register" style={{ color: '#4f46e5', fontWeight: 600 }}>Đăng ký ngay</Link>
+          <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Đăng ký ngay</Link>
         </div>
-        <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.8rem' }}>
-          <Link to="/login/admin" style={{ color: '#9ca3af' }}>Đăng nhập với tư cách Admin →</Link>
+        <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.85rem' }}>
+          <Link to="/login/admin" style={{ color: 'var(--gray-400)', textDecoration: 'none', fontWeight: 500 }}>
+            Đăng nhập với tư cách Admin →
+          </Link>
         </div>
       </div>
 
