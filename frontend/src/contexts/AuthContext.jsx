@@ -30,6 +30,7 @@ import api from '../services/api';
 const AuthContext = createContext(null);
 
 const TOKEN_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'auth_refresh_token';
 const USER_KEY = 'auth_user';
 
 /**
@@ -39,23 +40,27 @@ const USER_KEY = 'auth_user';
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
+  const [refreshToken, setRefreshToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Khôi phục session từ localStorage khi load lại trang
   useEffect(() => {
     const savedToken = localStorage.getItem(TOKEN_KEY);
+    const savedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
     const savedUser = localStorage.getItem(USER_KEY);
 
-    if (savedToken && savedUser) {
+    if (savedToken && savedRefreshToken && savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
         setToken(savedToken);
+        setRefreshToken(savedRefreshToken);
         setUser(parsedUser);
         // Gắn token vào axios instance
         api.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
       } catch {
         // Dữ liệu bị corrupt - xóa đi
         localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
       }
     }
@@ -64,21 +69,36 @@ export const AuthProvider = ({ children }) => {
 
   /**
    * Lưu thông tin đăng nhập vào state và localStorage
-   * @param {{ token: string, nguoiDung: AuthUser }} data
+   * @param {{ token: string, refreshToken: string, nguoiDung: AuthUser }} data
    */
-  const login = useCallback(({ token: newToken, nguoiDung }) => {
+  const login = useCallback(({ token: newToken, refreshToken: newRefreshToken, nguoiDung }) => {
     setToken(newToken);
+    setRefreshToken(newRefreshToken);
     setUser(nguoiDung);
     localStorage.setItem(TOKEN_KEY, newToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
     localStorage.setItem(USER_KEY, JSON.stringify(nguoiDung));
     api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+  }, []);
+
+  const updateAccessToken = useCallback((newToken) => {
+    setToken(newToken);
+    localStorage.setItem(TOKEN_KEY, newToken);
+    api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+  }, []);
+
+  const updateRefreshToken = useCallback((newRefreshToken) => {
+    setRefreshToken(newRefreshToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
   }, []);
 
   /** Xóa toàn bộ thông tin auth */
   const logout = useCallback(() => {
     setToken(null);
+    setRefreshToken(null);
     setUser(null);
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     delete api.defaults.headers.common['Authorization'];
   }, []);
@@ -86,9 +106,12 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     token,
+    refreshToken,
     isLoading,
     isAuthenticated: !!token && !!user,
     login,
+    updateAccessToken,
+    updateRefreshToken,
     logout,
   };
 

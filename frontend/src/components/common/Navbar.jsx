@@ -5,15 +5,23 @@
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import { useTheme } from '../../contexts/ThemeContext';
+import { logout as logoutApi } from '../../services/authService';
 
 const vaiTroLabel = { ADMIN: 'Admin', GIAO_VIEN: 'Giáo viên', SINH_VIEN: 'Sinh viên' };
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, refreshToken, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      if (refreshToken) {
+        await logoutApi(refreshToken);
+      }
+    } catch {
+      // Ignore API logout errors and clear local state anyway.
+    }
     logout();
     navigate('/login');
   };

@@ -20,6 +20,17 @@ const LoginAdmin = () => {
     setServerError('');
     try {
       const result = await loginAdmin(data);
+      if (result?.requires2FA) {
+        navigate('/2fa/verify', {
+          state: {
+            challengeToken: result.challengeToken,
+            email: result.nguoiDung?.email,
+            fromPathname: '/admin',
+            fromSearch: '',
+          },
+        });
+        return;
+      }
       authLogin(result);
       navigate('/admin', { replace: true });
     } catch (err) {

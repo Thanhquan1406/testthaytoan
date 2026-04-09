@@ -73,9 +73,48 @@ const validateDoiMatKhau = [
   handleValidationErrors,
 ];
 
+const validateForgotPassword = [
+  body('email').trim().isEmail().withMessage('Email không hợp lệ').normalizeEmail(),
+  handleValidationErrors,
+];
+
+const validateResetPassword = [
+  body('token').notEmpty().withMessage('Thiếu token đặt lại mật khẩu'),
+  body('matKhauMoi').isLength({ min: 6, max: 50 }).withMessage('Mật khẩu mới phải từ 6-50 ký tự'),
+  handleValidationErrors,
+];
+
+const validateRefresh = [
+  body('refreshToken').notEmpty().withMessage('Thiếu refresh token'),
+  handleValidationErrors,
+];
+
+const validate2FASetupVerify = [
+  body('otpCode').isLength({ min: 6, max: 6 }).withMessage('Mã OTP phải gồm 6 chữ số'),
+  handleValidationErrors,
+];
+
+const validate2FALoginVerify = [
+  body('challengeToken').notEmpty().withMessage('Thiếu challenge token'),
+  body('otpCode').isLength({ min: 6, max: 6 }).withMessage('Mã OTP phải gồm 6 chữ số'),
+  handleValidationErrors,
+];
+
+const validateDisable2FA = [
+  body('matKhau').notEmpty().withMessage('Vui lòng nhập mật khẩu'),
+  body('otpCode').isLength({ min: 6, max: 6 }).withMessage('Mã OTP phải gồm 6 chữ số'),
+  handleValidationErrors,
+];
+
 module.exports = {
   validateDangKy,
   validateDangNhap,
   validateDoiMatKhau,
+  validateForgotPassword,
+  validateResetPassword,
+  validateRefresh,
+  validate2FASetupVerify,
+  validate2FALoginVerify,
+  validateDisable2FA,
   handleValidationErrors,
 };

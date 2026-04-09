@@ -65,6 +65,23 @@ const nguoiDungSchema = new mongoose.Schema(
       sparse: true,
       trim: true,
     },
+    passwordChangedAt: {
+      type: Date,
+      default: null,
+    },
+    is2FAEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    totpSecretEncrypted: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    totpEnabledAt: {
+      type: Date,
+      default: null,
+    },
     vaiTro: {
       type: String,
       enum: Object.values(VAI_TRO),

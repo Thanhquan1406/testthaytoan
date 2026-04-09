@@ -14,6 +14,10 @@ import useAuth from './hooks/useAuth';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import LoginAdmin from './pages/auth/LoginAdmin';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
+import TwoFactorVerify from './pages/auth/TwoFactorVerify';
+import SecuritySettings from './pages/auth/SecuritySettings';
 
 // Admin pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -66,6 +70,7 @@ const ADMIN_NAV = [
   { to: '/admin/mon-hoc', label: 'Môn học', icon: '📚' },
   { to: '/admin/de-thi', label: 'Đề thi', icon: '📄' },
   { to: '/admin/cau-hoi', label: 'Ngân hàng câu hỏi', icon: '❓' },
+  { to: '/admin/security', label: 'Bảo mật', icon: '🔐' },
 ];
 
 const GV_NAV = [
@@ -76,6 +81,7 @@ const GV_NAV = [
   { to: '/giao-vien/ket-qua', label: 'Kết quả', icon: '📊' },
   { to: '/giao-vien/theo-doi', label: 'Theo dõi thi', icon: '👁' },
   { to: '/giao-vien/ho-so', label: 'Hồ sơ', icon: '👤' },
+  { to: '/giao-vien/security', label: 'Bảo mật', icon: '🔐' },
 ];
 
 const SV_NAV = [
@@ -83,6 +89,7 @@ const SV_NAV = [
   { to: '/sinh-vien/phong-thi', label: 'Phòng thi', icon: '🚪' },
   { to: '/sinh-vien/lich-su', label: 'Lịch sử thi', icon: '📋' },
   { to: '/sinh-vien/ho-so', label: 'Hồ sơ', icon: '👤' },
+  { to: '/sinh-vien/security', label: 'Bảo mật', icon: '🔐' },
 ];
 
 // ─── LAYOUT COMPONENT ────────────────────────────────────────────────────────
@@ -129,6 +136,9 @@ const AppRoutes = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/login/admin" element={<LoginAdmin />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/2fa/verify" element={<TwoFactorVerify />} />
 
       {/* Thi qua link */}
       <Route path="/thi-mo" element={<ThiMoCongKhai />} />
@@ -143,6 +153,7 @@ const AppRoutes = () => {
         <Route path="/admin/mon-hoc" element={<AdminMonHoc />} />
         <Route path="/admin/de-thi" element={<AdminDeThi />} />
         <Route path="/admin/cau-hoi" element={<AdminCauHoi />} />
+        <Route path="/admin/security" element={<SecuritySettings />} />
       </Route>
 
       {/* Giáo viên routes */}
@@ -157,6 +168,7 @@ const AppRoutes = () => {
         <Route path="/giao-vien/ket-qua/xem/:phienThiId" element={<GVXemBai />} />
         <Route path="/giao-vien/theo-doi" element={<GVTheoDoi />} />
         <Route path="/giao-vien/ho-so" element={<GVHoSo />} />
+        <Route path="/giao-vien/security" element={<SecuritySettings />} />
       </Route>
 
       {/* Shared routes (ADMIN & GIAO_VIEN) - Ngân hàng câu hỏi */}
@@ -176,6 +188,7 @@ const AppRoutes = () => {
         <Route path="/sinh-vien/lich-su" element={<SVLichSu />} />
         <Route path="/sinh-vien/lich-su/:phienThiId" element={<SVLichSuChiTiet />} />
         <Route path="/sinh-vien/ho-so" element={<SVHoSo />} />
+        <Route path="/sinh-vien/security" element={<SecuritySettings />} />
       </Route>
 
       {/* Trang làm bài - fullscreen không có sidebar */}

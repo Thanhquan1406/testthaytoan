@@ -7,8 +7,8 @@ const jwtConfig = {
   /** Secret key cho token người dùng thường */
   secret: process.env.JWT_SECRET || 'dev_secret_change_in_production',
 
-  /** Thời gian hết hạn token thường (7 ngày) */
-  expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  /** Thời gian hết hạn access token thường (khuyến nghị ngắn) */
+  expiresIn: process.env.JWT_EXPIRES_IN || '15m',
 
   /** Secret cho token thi ẩn danh (có thể dùng chung hoặc riêng) */
   anonymousSecret: process.env.JWT_SECRET || 'dev_secret_change_in_production',

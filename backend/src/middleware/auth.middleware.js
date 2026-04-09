@@ -4,6 +4,7 @@
  */
 
 const { kiemTraToken } = require('../services/jwt.service');
+const AuthSession = require('../models/AuthSession');
 const { unauthorized } = require('../utils/apiResponse');
 
 /**
@@ -13,7 +14,7 @@ const { unauthorized } = require('../utils/apiResponse');
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -24,6 +25,17 @@ const verifyToken = (req, res, next) => {
 
   try {
     const decoded = kiemTraToken(token);
+    if (decoded.sessionId) {
+      const activeSession = await AuthSession.findOne({
+        sessionId: decoded.sessionId,
+        userId: decoded.id,
+        revokedAt: null,
+      }).lean();
+      if (!activeSession) {
+        return unauthorized(res, 'Phiên đăng nhập không còn hiệu lực');
+      }
+    }
+
     req.user = decoded;
     return next();
   } catch (err) {

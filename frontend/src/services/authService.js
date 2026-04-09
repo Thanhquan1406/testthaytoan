@@ -56,3 +56,36 @@ export const checkEmail = (email) =>
  */
 export const checkSdt = (soDienThoai) =>
   api.get('/auth/check-sdt', { params: { soDienThoai } }).then((r) => r.data);
+
+export const refreshToken = (refreshTokenValue) =>
+  api.post('/auth/refresh', { refreshToken: refreshTokenValue }).then((r) => r.data);
+
+export const forgotPassword = (email) => api.post('/auth/forgot-password', { email }).then((r) => r.message);
+
+export const resetPassword = ({ token, matKhauMoi }) =>
+  api.post('/auth/reset-password', { token, matKhauMoi }).then((r) => r.message);
+
+export const changePassword = ({ matKhauCu, matKhauMoi, matKhauMoi2 }) =>
+  api.post('/auth/change-password', { matKhauCu, matKhauMoi, matKhauMoi2 }).then((r) => r.message);
+
+export const verifyTwoFactorLogin = ({ challengeToken, otpCode }) =>
+  api.post('/auth/2fa/verify-login', { challengeToken, otpCode }).then((r) => r.data);
+
+export const startTwoFactorSetup = () => api.post('/auth/2fa/setup/start').then((r) => r.data);
+
+export const verifyTwoFactorSetup = (otpCode) =>
+  api.post('/auth/2fa/setup/verify', { otpCode }).then((r) => r.message);
+
+export const disableTwoFactor = ({ matKhau, otpCode }) =>
+  api.post('/auth/2fa/disable', { matKhau, otpCode }).then((r) => r.message);
+
+export const getTwoFactorStatus = () => api.get('/auth/2fa/status').then((r) => r.data);
+
+export const getActiveSessions = () => api.get('/auth/sessions').then((r) => r.data);
+
+export const revokeSession = (sessionId) => api.delete(`/auth/sessions/${sessionId}`).then((r) => r.message);
+
+export const logoutAllSessions = () => api.post('/auth/logout-all').then((r) => r.message);
+
+export const logout = (refreshTokenValue) =>
+  api.post('/auth/logout', { refreshToken: refreshTokenValue }).then((r) => r.message);

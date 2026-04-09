@@ -140,6 +140,17 @@ const Login = () => {
     setServerError('');
     try {
       const result = await login(data);
+      if (result?.requires2FA) {
+        navigate('/2fa/verify', {
+          state: {
+            challengeToken: result.challengeToken,
+            email: result.nguoiDung?.email,
+            fromPathname,
+            fromSearch,
+          },
+        });
+        return;
+      }
       authLogin(result);
       redirectAfterLogin(result.nguoiDung.vaiTro);
     } catch (err) {
@@ -158,6 +169,17 @@ const Login = () => {
           googleData: result.googleData,
         });
       } else {
+        if (result?.requires2FA) {
+          navigate('/2fa/verify', {
+            state: {
+              challengeToken: result.challengeToken,
+              email: result.nguoiDung?.email,
+              fromPathname,
+              fromSearch,
+            },
+          });
+          return;
+        }
         authLogin(result);
         redirectAfterLogin(result.nguoiDung.vaiTro);
       }
@@ -262,6 +284,11 @@ const Login = () => {
         <div style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
           Chưa có tài khoản?{' '}
           <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Đăng ký ngay</Link>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: '0.75rem', fontSize: '0.9rem' }}>
+          <Link to="/forgot-password" style={{ color: 'var(--primary)', textDecoration: 'none' }}>
+            Quên mật khẩu?
+          </Link>
         </div>
         <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.85rem' }}>
           <Link to="/login/admin" style={{ color: 'var(--gray-400)', textDecoration: 'none', fontWeight: 500 }}>
